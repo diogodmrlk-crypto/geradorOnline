@@ -6,7 +6,6 @@ export default function handler(req, res) {
   const data = JSON.parse(fs.readFileSync("data.json"));
 
   const k = data.keys.find(k => k.key === key);
-
   if (k) k.revoked = true;
 
   fs.writeFileSync("data.json", JSON.stringify(data, null, 2));
