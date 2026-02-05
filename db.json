@@ -1,0 +1,11 @@
+{
+  "users": [
+    {
+      "username": "Ferraodev",
+      "password": "Diogomiranda00k",
+      "admin": true,
+      "plan": "infinite"
+    }
+  ],
+  "keys": []
+}
