@@ -1,0 +1,4 @@
+body { font-family: Arial; text-align:center; margin:20px; }
+.menu { font-size:30px; cursor:pointer; }
+.dropdown { display:none; margin-bottom:20px; }
+.dropdown a { display:block; padding:5px; text-decoration:none; }
