@@ -5,9 +5,7 @@ export default function handler(req, res) {
 
   const data = JSON.parse(fs.readFileSync("data.json"));
 
-  const user = data.users.find(
-    u => u.username === username && u.password === password
-  );
+  const user = data.users.find(u => u.username === username && u.password === password);
 
   if (!user) return res.status(401).json({ error: "Login inválido" });
 
