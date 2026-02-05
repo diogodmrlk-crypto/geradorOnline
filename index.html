@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Hospedagem brasileira</title>
+<title>Ferrao Generator</title>
 <style>
 * { margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI', Tahoma, sans-serif; }
 body { background:#0f1e0f; color:#fff; display:flex; flex-direction:column; align-items:center; min-height:100vh; transition:0.3s; overflow-x:hidden;}
@@ -51,38 +51,28 @@ a.button:hover { background:#32a532; }
 
 <script>
 let currentUser = null;
-const discordLink = "https://discord.gg/ferraocheats";
-const apiURL = "https://teste-api-mcok.vercel.app/keys";
+const discordLink = "https://discord.gg/seulink";
+const usersAPI = "https://gerador-online-9fqv.vercel.app/dados";
+const keysAPI = "https://teste-api-mcok.vercel.app/keys";
 
 // Menu
 function toggleMenu(){ document.getElementById("dropdown").style.display = document.getElementById("dropdown").style.display==='flex'?'none':'flex'; }
 
-// LocalStorage
-function getData(){ 
-  return JSON.parse(localStorage.getItem("db") || '{"users":[{"username":"Ferraodev","password":"Diogomiranda00k","admin":true,"plan":"ilimitado","planEnd":null,"keysGenerated":0,"planLimit":0,"avatar":""}]}'); 
-}
-function saveData(d){ localStorage.setItem("db", JSON.stringify(d)); }
-function saveUser(){ 
-  const db = getData(); 
-  const idx = db.users.findIndex(u=>u.username===currentUser.username); 
-  if(idx>=0){ db.users[idx]=currentUser; saveData(db); } 
-}
-
-// Scroll animation
+// Scroll effect
 function scrollEffect(){ const cards=document.querySelectorAll(".card"); window.addEventListener("scroll",()=>{ const trigger=window.innerHeight*0.9; cards.forEach(card=>{ if(card.getBoundingClientRect().top<trigger) card.classList.add("show"); }); }); }
 
 // Home
 function showHome(){
   document.getElementById("main").innerHTML = `
     <h1>Bem-vindo ao Ferrao Generator</h1>
-    <div class="card show"><h2>Funcionalidades</h2><p>Integrecao online com seu script, gerencie keys e lucra!</p></div>
-    <div class="card show"><h2>Segurança</h2><p>Sistema protegido por HWID, sem vazamentos e compartilhamentos das keys.</p></div>
+    <div class="card show"><h2>Funcionalidades</h2><p>Gerar keys, gerenciar plano, avatar, dashboard completo.</p></div>
+    <div class="card show"><h2>Segurança</h2><p>Controle de limite de keys, revogação e devices reset.</p></div>
     <div class="card show"><h2>Planos</h2><p>Escolha seu plano e tenha acesso às funcionalidades.</p><a href="${discordLink}" target="_blank" class="button">Adquirir Plano</a></div>
   `;
   scrollEffect();
 }
 
-// Login / Register
+// Login/Register HTML
 function showLogin(){ document.getElementById("main").innerHTML = `
   <div class="card show">
     <h2>Entrar</h2>
@@ -101,40 +91,18 @@ function showRegister(){ document.getElementById("main").innerHTML = `
   </div>
 `; }
 
-// Login / Register funcional
-function login(){
-  const u = document.getElementById("loginUser").value;
-  const p = document.getElementById("loginPass").value;
-  const db = getData();
-  const user = db.users.find(x=>x.username===u && x.password===p);
-  if(!user){ alert("Login inválido"); return; }
-  currentUser = user;
-  showDashboard();
-}
-
-function register(){
-  const u = document.getElementById("regUser").value;
-  const p = document.getElementById("regPass").value;
-  const db = getData();
-  if(db.users.find(x=>x.username===u)){ alert("Usuário já existe"); return; }
-  const avatar = document.getElementById("regAvatar").src;
-  const newUser = {username:u,password:p,admin:false,plan:null,planEnd:null,keysGenerated:0,planLimit:0,devices:[],keys:[],avatar:avatar};
-  db.users.push(newUser); saveData(db); alert("Cadastro realizado!"); showLogin();
-}
-
 // Avatar
 function uploadAvatar(img){
   const file = document.createElement("input"); file.type="file"; file.accept="image/*";
   file.onchange = e=>{ const reader = new FileReader(); reader.onload = ()=>{ img.src = reader.result; }; reader.readAsDataURL(e.target.files[0]); }
   file.click();
 }
-function changeAvatar(){ uploadAvatar(document.querySelector(".avatar")); const db=getData(); const idx=db.users.findIndex(u=>u.username===currentUser.username); if(idx>=0){ db.users[idx].avatar=document.querySelector(".avatar").src; saveData(db);} }
 
 // Logout
 function logout(){ currentUser=null; document.querySelector(".logout").style.display="none"; document.getElementById("userHeader").textContent=""; showHome(); }
 
 // Dashboard
-function showDashboard(){
+async function showDashboard(){
   document.querySelector(".logout").style.display="inline-block";
   document.getElementById("userHeader").textContent = `${currentUser.username} (${currentUser.plan||'Sem plano'})`;
 
@@ -149,7 +117,8 @@ function showDashboard(){
       <h3>Gerenciar Keys de Usuários</h3>
       <div id="keys"></div>
     `;
-    listUsers(); listAllKeys();
+    await listUsers();
+    await listAllKeys();
   } else {
     document.getElementById("main").innerHTML = `
       <h2>Dashboard</h2>
@@ -170,109 +139,97 @@ function showDashboard(){
   }
 }
 
-// Keys
+// List users (admin)
+async function listUsers(){
+  const div=document.getElementById("users"); if(!div) return;
+  const data=await fetch(usersAPI).then(r=>r.json());
+  div.innerHTML="";
+  data.users.forEach(u=>{
+    const d=document.createElement("div");
+    d.innerHTML=`<img src="${u.avatar||'https://via.placeholder.com/60'}" class="avatar"> <span>${u.username}</span> <span>Plano: ${u.plan||'Nenhum'}</span> <span>Keys: ${u.keysGenerated||0}/${u.planLimit||0}</span>`;
+    div.appendChild(d);
+  });
+}
+
+// List keys (admin)
+async function listAllKeys(){
+  const div=document.getElementById("keys"); if(!div) return;
+  div.innerHTML="";
+  const data=await fetch(keysAPI).then(r=>r.json());
+  data.forEach(k=>{
+    const d=document.createElement("div");
+    d.textContent=`${k.key} - ${k.type} - User: ${k.username} - Device: ${k.deviceUsed?'Usado':'Não usado'}`;
+    div.appendChild(d);
+  });
+}
+
+// User keys
+function listKeys(){
+  const div=document.getElementById("keys"); if(!div) return; div.innerHTML="";
+  currentUser.keys.forEach(k=>{
+    const d=document.createElement("div");
+    d.textContent=`${k.key} - ${k.type} - Device: ${k.deviceUsed?'Usado':'Não usado'}`;
+    div.appendChild(d);
+  });
+}
+
+// Create key
 async function createKey(){
-  if(!currentUser.plan && !currentUser.admin){ alert("Adquira um plano!"); return; }
+  if(!currentUser.plan){ alert("Adquira um plano!"); return; }
   if(currentUser.planLimit && currentUser.keysGenerated>=currentUser.planLimit){ alert("Limite de keys atingido!"); return; }
-  const type = prompt("Tipo de key (hour/day/month/year)"); if(!type) return;
-  const random = Math.random().toString(36).substring(2,10).toUpperCase();
-  const key = `FERRAO-CHEATS-${random}`;
-  const keyObj = {key:key,type:type,deviceUsed:false};
+
+  const type=prompt("Tipo de key (hour/day/month/year)"); if(!type) return;
+  const random=Math.random().toString(36).substring(2,10).toUpperCase();
+  const key=`FERRAO-CHEATS-${random}`;
+  const keyObj={key,type,deviceUsed:false};
   currentUser.keys.push(keyObj);
   currentUser.keysGenerated++;
-  saveUser();
+
   listKeys();
-  // Enviar para API
+
+  // Enviar para API de keys
   try{
-    await fetch(apiURL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({key:key,type:type,username:currentUser.username,deviceUsed:false})});
+    await fetch(keysAPI,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({key,type,username:currentUser.username,deviceUsed:false})});
   }catch(e){ console.log("Erro ao enviar para API:",e); }
   alert("Key gerada: "+key);
 }
 
-// List keys do usuário
-function listKeys(){
-  const div = document.getElementById("keys"); if(!div) return; div.innerHTML="";
-  if(!currentUser.keys) currentUser.keys=[];
-  currentUser.keys.forEach((k,index)=>{
-    const d = document.createElement("div");
-    d.innerHTML=`${k.key} - ${k.type} - Device: ${k.deviceUsed?'Usado':'Não usado'}`;
-    // Botões só para usuários com plano
-    if(currentUser.plan){
-      const btnDelete = document.createElement("button"); btnDelete.textContent="Excluir"; btnDelete.onclick=()=>{ currentUser.keys.splice(index,1); saveUser(); listKeys(); };
-      const btnRevoke = document.createElement("button"); btnRevoke.textContent="Revogar"; btnRevoke.onclick=()=>{ k.revoked=true; saveUser(); listKeys(); };
-      const btnReset = document.createElement("button"); btnReset.textContent="Resetar Device"; btnReset.onclick=()=>{ k.deviceUsed=false; saveUser(); listKeys(); };
-      d.appendChild(btnDelete); d.appendChild(btnRevoke); d.appendChild(btnReset);
-    }
-    div.appendChild(d);
-  });
-}
+// Avatar change
+function changeAvatar(){ uploadAvatar(document.querySelector(".avatar")); }
 
-// Admin criar key global
-async function adminCreateKey(){
-  const db=getData();
-  const type=prompt("Tipo de key (hour/day/month/year)"); if(!type) return;
-  const random = Math.random().toString(36).substring(2,10).toUpperCase();
-  const key=`FERRAO-CHEATS-${random}`;
-  db.users.forEach(u=>{ if(!u.keys) u.keys=[]; u.keys.push({key:key,type:type,deviceUsed:false}); });
-  saveData(db);
-  listAllKeys();
-  try{
-    await fetch(apiURL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({key:key,type:type,username:'global',deviceUsed:false})});
-  }catch(e){ console.log("Erro API:",e); }
-  alert("Key criada globalmente: "+key);
-}
-
-// List all keys admin
-function listAllKeys(){
-  const db=getData();
-  const div=document.getElementById("keys"); if(!div) return; div.innerHTML="";
-  db.users.forEach(u=>{
-    if(!u.keys) return;
-    u.keys.forEach(k=>{
-      const d=document.createElement("div");
-      d.innerHTML=`${k.key} - ${k.type} - User: ${u.username} - Device: ${k.deviceUsed?'Usado':'Não usado'}`;
-      const btn=document.createElement("button"); btn.textContent="Revogar"; btn.onclick=()=>{ k.revoked=true; k.deviceUsed=false; saveData(db); listAllKeys(); };
-      d.appendChild(btn);
-      div.appendChild(d);
-    });
-  });
-}
-
-// Admin users
-function listUsers(){
-  const db = getData();
-  const div = document.getElementById("users"); if(!div) return; div.innerHTML="";
-  db.users.forEach(u=>{
-    const d = document.createElement("div");
-    d.innerHTML=`<img src="${u.avatar||'https://via.placeholder.com/60'}" class="avatar"> <span>${u.username}</span> <span>Plano: ${u.plan||'Nenhum'}</span> <span>Keys: ${u.keysGenerated||0}/${u.planLimit||0}</span>`;
-    const btnPlan=document.createElement("button"); btnPlan.textContent="Definir Plano"; btnPlan.onclick=()=>setPlan(u.username);
-    const btnReset=document.createElement("button"); btnReset.textContent="Resetar Device"; btnReset.onclick=()=>resetDevice(u.username);
-    const btnRevoke=document.createElement("button"); btnRevoke.textContent="Revogar Plano"; btnRevoke.onclick=()=>revokePlan(u.username);
-    d.appendChild(btnPlan); d.appendChild(btnReset); d.appendChild(btnRevoke);
-    div.appendChild(d);
-  });
-}
-
-// Admin actions
-function setPlan(username){
-  const db=getData(); const user=db.users.find(u=>u.username===username); if(!user) return;
-  const plan=prompt("Digite o plano (basico/avancado/ilimitado)"); let limit=0, days=0;
-  if(plan==="basico"){ limit=500; days=30; } if(plan==="avancado"){ limit=2000; days=60; } if(plan==="ilimitado"){ limit=0; days=3650; }
-  user.plan=plan; user.planLimit=limit; user.planEnd=new Date(Date.now()+days*24*60*60*1000).toISOString();
-  saveData(db); listUsers();
-}
-function resetDevice(username){ const db=getData(); const user=db.users.find(u=>u.username===username); if(!user) return; user.devices=[]; saveData(db); listUsers(); }
-function revokePlan(username){ const db=getData(); const user=db.users.find(u=>u.username===username); if(!user) return; user.plan=null; user.planEnd=null; user.keysGenerated=0; user.planLimit=0; saveData(db); listUsers(); }
-
-// Timer plano
+// Plan timer
 function startPlanTimer(){
   const interval=setInterval(()=>{
     if(!currentUser.planEnd) return;
     const now=new Date(); const end=new Date(currentUser.planEnd); const diff=end-now;
-    if(diff<=0){ currentUser.plan=null; currentUser.planEnd=null; currentUser.planLimit=0; currentUser.keysGenerated=0; saveUser(); clearInterval(interval); alert("Seu plano expirou!"); showDashboard(); return;}
+    if(diff<=0){ currentUser.plan=null; currentUser.planEnd=null; currentUser.planLimit=0; currentUser.keysGenerated=0; alert("Seu plano expirou!"); clearInterval(interval); showDashboard(); return; }
     const days=Math.floor(diff/1000/60/60/24); const hours=Math.floor(diff/1000/60/60)%24; const mins=Math.floor(diff/1000/60)%60; const secs=Math.floor(diff/1000)%60;
     const timerDiv=document.getElementById("timer"); if(timerDiv) timerDiv.textContent=`Tempo restante do plano: ${days}d ${hours}h ${mins}m ${secs}s`;
   },1000);
+}
+
+// Login/Register (online)
+async function login(){
+  const u=document.getElementById("loginUser").value;
+  const p=document.getElementById("loginPass").value;
+  try{
+    const data=await fetch("https://gerador-online-9fqv.vercel.app/usuario").then(r=>r.json());
+  }catch(e){}
+  const res=await fetch("https://gerador-online-9fqv.vercel.app/dados").then(r=>r.json());
+  const user=res.users.find(x=>x.username===u && x.password===p);
+  if(!user){ alert("Login inválido"); return; }
+  currentUser=user;
+  showDashboard();
+}
+
+async function register(){
+  const u=document.getElementById("regUser").value;
+  const p=document.getElementById("regPass").value;
+  const avatar=document.getElementById("regAvatar").src;
+  const res=await fetch("https://gerador-online-9fqv.vercel.app/usuario",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({username:u,password:p,avatar})}).then(r=>r.json());
+  if(res.error){ alert(res.error); return; }
+  alert("Cadastro realizado!");
+  showLogin();
 }
 
 // Init
