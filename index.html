@@ -23,6 +23,7 @@ input::placeholder { color:#aaa; }
 .user-info { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; }
 #keys div, #users div { background:#2a5a2a; margin:5px 0; padding:10px; border-radius:15px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; }
 #keys div button, #users div button { background:#ff4444; padding:5px 10px; font-size:12px; margin:3px; border-radius:6px; cursor:pointer; }
+#users div button.plan { background:#3f9fff; }
 #keys div span, #users div span { margin:3px; }
 .logout { background:#ff4444; padding:8px 16px; border-radius:12px; cursor:pointer; float:right; margin-right:10px; display:none; }
 a.button { text-decoration:none; display:inline-block; background:#3fc03f; padding:12px 25px; border-radius:12px; color:#fff; margin-top:10px; transition:0.3s; }
@@ -137,16 +138,48 @@ async function showDashboard(){
   }
 }
 
-// List users (admin)
+// List users (admin) with plan management
 async function listUsers(){
   const div=document.getElementById("users"); if(!div) return;
   const data=await fetch(usersAPI).then(r=>r.json());
   div.innerHTML="";
   data.users.forEach(u=>{
     const d=document.createElement("div");
-    d.innerHTML=`<img src="${u.avatar||'https://via.placeholder.com/60'}" class="avatar"> <span>${u.username}</span> <span>Plano: ${u.plan||'Nenhum'}</span> <span>Keys: ${u.keysGenerated||0}/${u.planLimit||0}</span>`;
+    d.innerHTML=`
+      <img src="${u.avatar||'https://via.placeholder.com/60'}" class="avatar">
+      <span>${u.username}</span>
+      <span>Plano: ${u.plan||'Nenhum'}</span>
+      <span>Keys: ${u.keysGenerated||0}/${u.planLimit||0}</span>
+      <button class="plan" onclick="assignPlan('${u.username}')">Atribuir Plano</button>
+      <button class="plan" onclick="removePlan('${u.username}')">Remover Plano</button>
+    `;
     div.appendChild(d);
   });
+}
+
+// Assign / Remove Plan
+async function assignPlan(username){
+  const plan = prompt("Digite o plano (ex: Basico)"); 
+  if(!plan) return;
+  const limit = parseInt(prompt("Limite de keys deste plano? (Ex: 500)"));
+  const days = parseInt(prompt("Duração em dias?"));
+  const res = await fetch(usersAPI+"/"+username,{
+    method:"PATCH",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({plan,planLimit:limit,planEnd:new Date(Date.now()+days*24*60*60*1000).toISOString()})
+  }).then(r=>r.json());
+  alert("Plano atribuído!");
+  listUsers();
+}
+
+async function removePlan(username){
+  const res = await fetch(usersAPI+"/"+username,{
+    method:"PATCH",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({plan:null,planLimit:0,planEnd:null,keysGenerated:0})
+  }).then(r=>r.json());
+  alert("Plano removido!");
+  listUsers();
 }
 
 // List keys (admin)
@@ -164,27 +197,18 @@ async function listAllKeys(){
   });
 }
 
-// Admin actions (integradas à API)
+// Admin key actions
 async function revokeKey(key){
-  try{
-    await fetch(keysAPI+"/"+key,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({revoked:true})});
-    alert("Key revogada: "+key);
-    listAllKeys();
-  }catch(e){ alert("Erro revogando key"); console.log(e);}
+  await fetch(keysAPI+"/"+key,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({revoked:true})});
+  listAllKeys();
 }
 async function deleteKey(key){
-  try{
-    await fetch(keysAPI+"/"+key,{method:"DELETE"});
-    alert("Key excluída: "+key);
-    listAllKeys();
-  }catch(e){ alert("Erro excluindo key"); console.log(e);}
+  await fetch(keysAPI+"/"+key,{method:"DELETE"});
+  listAllKeys();
 }
 async function resetDevice(key){
-  try{
-    await fetch(keysAPI+"/"+key,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({device:null,deviceUsed:false})});
-    alert("Device resetado: "+key);
-    listAllKeys();
-  }catch(e){ alert("Erro resetando device"); console.log(e);}
+  await fetch(keysAPI+"/"+key,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({device:null,deviceUsed:false})});
+  listAllKeys();
 }
 
 // User keys
@@ -208,14 +232,10 @@ async function createKey(){
   const keyObj={key,type,deviceUsed:false};
   currentUser.keys.push(keyObj);
   currentUser.keysGenerated++;
-
   listKeys();
 
-  // Enviar para API de keys
-  try{
-    await fetch(keysAPI,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({key,type,username:currentUser.username,deviceUsed:false})});
-  }catch(e){ console.log("Erro ao enviar para API:",e); }
-  alert("Key gerada: "+key);
+  // Send key to API
+  await fetch(keysAPI,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({key,type,username:currentUser.username,deviceUsed:false})});
 }
 
 // Avatar change
@@ -260,6 +280,5 @@ async function register(){
 // Init
 showHome();
 </script>
-
 </body>
 </html>
