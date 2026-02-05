@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Ferrao Generator</title>
+<title>Ferrao Generator Admin</title>
 <style>
 * { margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI', Tahoma, sans-serif; }
 body { background:#0f1e0f; color:#fff; display:flex; flex-direction:column; align-items:center; min-height:100vh; transition:0.3s; overflow-x:hidden;}
@@ -52,15 +52,15 @@ a.button:hover { background:#32a532; }
 <script>
 // Variáveis
 let currentUser = null;
-const discordLink = "https://discord.gg/seulink"; // coloque seu Discord aqui
+const discordLink = "https://discord.gg/seulink";
 
-// Funções de menu
+// Menu
 function toggleMenu(){
   const dd = document.getElementById("dropdown");
   dd.style.display = dd.style.display==='flex'?'none':'flex';
 }
 
-// LocalStorage helpers
+// LocalStorage
 function getData(){ 
   return JSON.parse(localStorage.getItem("db") || '{"users":[{"username":"Ferraodev","password":"Diogomiranda00k","admin":true,"plan":"ilimitado","planEnd":null,"keysGenerated":0,"planLimit":0,"avatar":""}]}'); 
 }
@@ -178,12 +178,15 @@ function showDashboard(){
     document.getElementById("main").innerHTML = `
       <h2>Painel Admin</h2>
       <div class="card show">
-        <button onclick="adminCreateKey()">Criar Key</button>
+        <button onclick="adminCreateKey()">Criar Key Global</button>
       </div>
       <h3>Usuários Registrados</h3>
       <div id="users"></div>
+      <h3>Gerenciar Keys de Usuários</h3>
+      <div id="keys"></div>
     `;
     listUsers();
+    listAllKeys();
   } else {
     document.getElementById("main").innerHTML = `
       <h2>Dashboard</h2>
@@ -204,7 +207,7 @@ function showDashboard(){
   }
 }
 
-// KEYS salvas no localStorage
+// Keys
 function createKey(){
   if(!currentUser.plan && !currentUser.admin){ alert("Adquira um plano!"); return; }
   if(currentUser.planLimit && currentUser.keysGenerated>=currentUser.planLimit){ alert("Limite de keys atingido!"); return; }
@@ -220,6 +223,7 @@ function createKey(){
   alert("Key gerada: "+key);
 }
 
+// List keys
 function listKeys(){
   const div = document.getElementById("keys"); if(!div) return;
   div.innerHTML="";
@@ -231,6 +235,40 @@ function listKeys(){
   });
 }
 
+// Admin criar key global
+function adminCreateKey(){
+  const db=getData();
+  const type=prompt("Tipo de key (hour/day/month/year)"); if(!type) return;
+  const random = Math.random().toString(36).substring(2,10).toUpperCase();
+  const key=`FERRAO-CHEATS-${random}`;
+  db.users.forEach(u=>{ 
+    if(!u.keys) u.keys=[]; 
+    u.keys.push({key:key,type:type,deviceUsed:false});
+  });
+  saveData(db);
+  listAllKeys();
+  alert("Key criada globalmente: "+key);
+}
+
+// List all keys admin
+function listAllKeys(){
+  const db=getData();
+  const div=document.getElementById("keys"); if(!div) return;
+  div.innerHTML="";
+  db.users.forEach(u=>{
+    if(!u.keys) return;
+    u.keys.forEach(k=>{
+      const d=document.createElement("div");
+      d.innerHTML=`${k.key} - ${k.type} - User: ${u.username} - Device: ${k.deviceUsed?'Usado':'Não usado'}`;
+      // Botão revogar key
+      const btn=document.createElement("button");
+      btn.textContent="Revogar"; btn.onclick=()=>{ k.revoked=true; k.deviceUsed=false; saveData(db); listAllKeys(); };
+      d.appendChild(btn);
+      div.appendChild(d);
+    });
+  });
+}
+
 // Admin users
 function listUsers(){
   const db = getData();
@@ -239,11 +277,27 @@ function listUsers(){
   db.users.forEach(u=>{
     const d = document.createElement("div");
     d.innerHTML=`<img src="${u.avatar||'https://via.placeholder.com/60'}" class="avatar"> <span>${u.username}</span> <span>Plano: ${u.plan||'Nenhum'}</span> <span>Keys: ${u.keysGenerated||0}/${u.planLimit||0}</span>`;
+    // Botões admin
+    const btnPlan=document.createElement("button"); btnPlan.textContent="Definir Plano"; btnPlan.onclick=()=>setPlan(u.username);
+    const btnReset=document.createElement("button"); btnReset.textContent="Resetar Device"; btnReset.onclick=()=>resetDevice(u.username);
+    const btnRevoke=document.createElement("button"); btnRevoke.textContent="Revogar Plano"; btnRevoke.onclick=()=>revokePlan(u.username);
+    d.appendChild(btnPlan); d.appendChild(btnReset); d.appendChild(btnRevoke);
     div.appendChild(d);
   });
 }
 
-// Timer do plano
+// Admin actions
+function setPlan(username){
+  const db=getData(); const user=db.users.find(u=>u.username===username); if(!user) return;
+  const plan=prompt("Digite o plano (basico/avancado/ilimitado)"); let limit=0, days=0;
+  if(plan==="basico"){ limit=500; days=30; } if(plan==="avancado"){ limit=2000; days=60; } if(plan==="ilimitado"){ limit=0; days=3650; }
+  user.plan=plan; user.planLimit=limit; user.planEnd=new Date(Date.now()+days*24*60*60*1000).toISOString();
+  saveData(db); listUsers();
+}
+function resetDevice(username){ const db=getData(); const user=db.users.find(u=>u.username===username); if(!user) return; user.devices=[]; saveData(db); listUsers(); }
+function revokePlan(username){ const db=getData(); const user=db.users.find(u=>u.username===username); if(!user) return; user.plan=null; user.planEnd=null; user.keysGenerated=0; user.planLimit=0; saveData(db); listUsers(); }
+
+// Timer plano
 function startPlanTimer(){
   const interval=setInterval(()=>{
     if(!currentUser.planEnd) return;
