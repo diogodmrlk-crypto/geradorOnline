@@ -1,6 +1,5 @@
-import fs from "fs";
-
-export default function handler(req, res) {
-  const data = JSON.parse(fs.readFileSync("data.json"));
-  res.json(data.keys);
+export default async function handler(req,res){
+  const response = await fetch("https://teste-api-mcok.vercel.app/keys");
+  const data = await response.json();
+  res.json(data);
 }
