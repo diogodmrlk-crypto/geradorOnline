@@ -10,9 +10,9 @@ export default function handler(req, res) {
   data.keys.push({
     key,
     type,
-    revoked: false,
     used: false,
-    createdAt: new Date()
+    revoked: false,
+    createdAt: new Date().toISOString()
   });
 
   fs.writeFileSync("data.json", JSON.stringify(data, null, 2));
