@@ -163,21 +163,21 @@ async function assignPlan(username){
   if(!plan) return;
   const limit = parseInt(prompt("Limite de keys deste plano? (Ex: 500)"));
   const days = parseInt(prompt("Duração em dias?"));
-  const res = await fetch(usersAPI+"/"+username,{
+  await fetch(usersAPI+"/"+username,{
     method:"PATCH",
     headers:{"Content-Type":"application/json"},
     body:JSON.stringify({plan,planLimit:limit,planEnd:new Date(Date.now()+days*24*60*60*1000).toISOString()})
-  }).then(r=>r.json());
+  });
   alert("Plano atribuído!");
   listUsers();
 }
 
 async function removePlan(username){
-  const res = await fetch(usersAPI+"/"+username,{
+  await fetch(usersAPI+"/"+username,{
     method:"PATCH",
     headers:{"Content-Type":"application/json"},
     body:JSON.stringify({plan:null,planLimit:0,planEnd:null,keysGenerated:0})
-  }).then(r=>r.json());
+  });
   alert("Plano removido!");
   listUsers();
 }
@@ -198,23 +198,14 @@ async function listAllKeys(){
 }
 
 // Admin key actions
-async function revokeKey(key){
-  await fetch(keysAPI+"/"+key,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({revoked:true})});
-  listAllKeys();
-}
-async function deleteKey(key){
-  await fetch(keysAPI+"/"+key,{method:"DELETE"});
-  listAllKeys();
-}
-async function resetDevice(key){
-  await fetch(keysAPI+"/"+key,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({device:null,deviceUsed:false})});
-  listAllKeys();
-}
+async function revokeKey(key){ await fetch(keysAPI+"/"+key,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({revoked:true})}); listAllKeys(); }
+async function deleteKey(key){ await fetch(keysAPI+"/"+key,{method:"DELETE"}); listAllKeys(); }
+async function resetDevice(key){ await fetch(keysAPI+"/"+key,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({device:null,deviceUsed:false})}); listAllKeys(); }
 
 // User keys
 function listKeys(){
   const div=document.getElementById("keys"); if(!div) return; div.innerHTML="";
-  currentUser.keys.forEach(k=>{
+  if(currentUser.keys) currentUser.keys.forEach(k=>{
     const d=document.createElement("div");
     d.innerHTML=`<span>${k.key} - ${k.type} - Device: ${k.deviceUsed?'Usado':'Não usado'}</span>`;
     div.appendChild(d);
@@ -230,11 +221,11 @@ async function createKey(){
   const random=Math.random().toString(36).substring(2,10).toUpperCase();
   const key=`FERRAO-CHEATS-${random}`;
   const keyObj={key,type,deviceUsed:false};
+  if(!currentUser.keys) currentUser.keys=[];
   currentUser.keys.push(keyObj);
   currentUser.keysGenerated++;
   listKeys();
 
-  // Send key to API
   await fetch(keysAPI,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({key,type,username:currentUser.username,deviceUsed:false})});
 }
 
@@ -252,7 +243,7 @@ function startPlanTimer(){
   },1000);
 }
 
-// Login/Register (online)
+// Login
 async function login(){
   const u=document.getElementById("loginUser").value;
   const p=document.getElementById("loginPass").value;
@@ -263,22 +254,38 @@ async function login(){
   showDashboard();
 }
 
+// Register
 async function register(){
-  const u=document.getElementById("regUser").value;
-  const p=document.getElementById("regPass").value;
-  const avatar=document.getElementById("regAvatar").src;
-  const res=await fetch(usersAPI,{
-    method:"POST",
-    headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({username:u,password:p,avatar})
-  }).then(r=>r.json());
-  if(res.error){ alert(res.error); return; }
-  alert("Cadastro realizado!");
-  showLogin();
+    const u = document.getElementById("regUser").value.trim();
+    const p = document.getElementById("regPass").value.trim();
+    const avatar = document.getElementById("regAvatar").src;
+    if(!u || !p){ alert("Preencha usuário e senha!"); return; }
+
+    try {
+        const res = await fetch(usersAPI, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                username: u,
+                password: p,
+                avatar,
+                plan: null,
+                keysGenerated: 0,
+                planLimit: 0,
+                planEnd: null,
+                keys: [],
+                admin: false
+            })
+        });
+        if(!res.ok){ const err=await res.json(); alert(err.error || "Erro ao cadastrar usuário!"); return; }
+        alert("Cadastro realizado com sucesso!");
+        showLogin();
+    } catch(e){ console.error(e); alert("Erro ao conectar com a API!"); }
 }
 
 // Init
 showHome();
 </script>
+
 </body>
 </html>
