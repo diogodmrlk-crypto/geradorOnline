@@ -57,8 +57,6 @@ const keysAPI = "https://teste-api-mcok.vercel.app/keys";
 
 // Menu
 function toggleMenu(){ document.getElementById("dropdown").style.display = document.getElementById("dropdown").style.display==='flex'?'none':'flex'; }
-
-// Scroll effect
 function scrollEffect(){ const cards=document.querySelectorAll(".card"); window.addEventListener("scroll",()=>{ const trigger=window.innerHeight*0.9; cards.forEach(card=>{ if(card.getBoundingClientRect().top<trigger) card.classList.add("show"); }); }); }
 
 // Home
@@ -72,7 +70,7 @@ function showHome(){
   scrollEffect();
 }
 
-// Login/Register HTML
+// Login/Register
 function showLogin(){ document.getElementById("main").innerHTML = `
   <div class="card show">
     <h2>Entrar</h2>
@@ -114,7 +112,7 @@ async function showDashboard(){
       </div>
       <h3>Usuários Registrados</h3>
       <div id="users"></div>
-      <h3>Gerenciar Keys de Usuários</h3>
+      <h3>Gerenciar Keys</h3>
       <div id="keys"></div>
     `;
     await listUsers();
@@ -158,9 +156,35 @@ async function listAllKeys(){
   const data=await fetch(keysAPI).then(r=>r.json());
   data.forEach(k=>{
     const d=document.createElement("div");
-    d.textContent=`${k.key} - ${k.type} - User: ${k.username} - Device: ${k.deviceUsed?'Usado':'Não usado'}`;
+    d.innerHTML=`<span>${k.key} - ${k.type} - User: ${k.username} - Device: ${k.deviceUsed?'Usado':'Não usado'}</span>
+    <button onclick="revokeKey('${k.key}')">Revogar</button>
+    <button onclick="deleteKey('${k.key}')">Excluir</button>
+    <button onclick="resetDevice('${k.key}')">Resetar Device</button>`;
     div.appendChild(d);
   });
+}
+
+// Admin actions (integradas à API)
+async function revokeKey(key){
+  try{
+    await fetch(keysAPI+"/"+key,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({revoked:true})});
+    alert("Key revogada: "+key);
+    listAllKeys();
+  }catch(e){ alert("Erro revogando key"); console.log(e);}
+}
+async function deleteKey(key){
+  try{
+    await fetch(keysAPI+"/"+key,{method:"DELETE"});
+    alert("Key excluída: "+key);
+    listAllKeys();
+  }catch(e){ alert("Erro excluindo key"); console.log(e);}
+}
+async function resetDevice(key){
+  try{
+    await fetch(keysAPI+"/"+key,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({device:null,deviceUsed:false})});
+    alert("Device resetado: "+key);
+    listAllKeys();
+  }catch(e){ alert("Erro resetando device"); console.log(e);}
 }
 
 // User keys
@@ -168,7 +192,7 @@ function listKeys(){
   const div=document.getElementById("keys"); if(!div) return; div.innerHTML="";
   currentUser.keys.forEach(k=>{
     const d=document.createElement("div");
-    d.textContent=`${k.key} - ${k.type} - Device: ${k.deviceUsed?'Usado':'Não usado'}`;
+    d.innerHTML=`<span>${k.key} - ${k.type} - Device: ${k.deviceUsed?'Usado':'Não usado'}</span>`;
     div.appendChild(d);
   });
 }
@@ -212,10 +236,7 @@ function startPlanTimer(){
 async function login(){
   const u=document.getElementById("loginUser").value;
   const p=document.getElementById("loginPass").value;
-  try{
-    const data=await fetch("https://gerador-online-9fqv.vercel.app/usuario").then(r=>r.json());
-  }catch(e){}
-  const res=await fetch("https://gerador-online-9fqv.vercel.app/dados").then(r=>r.json());
+  const res=await fetch(usersAPI).then(r=>r.json());
   const user=res.users.find(x=>x.username===u && x.password===p);
   if(!user){ alert("Login inválido"); return; }
   currentUser=user;
@@ -226,7 +247,11 @@ async function register(){
   const u=document.getElementById("regUser").value;
   const p=document.getElementById("regPass").value;
   const avatar=document.getElementById("regAvatar").src;
-  const res=await fetch("https://gerador-online-9fqv.vercel.app/usuario",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({username:u,password:p,avatar})}).then(r=>r.json());
+  const res=await fetch(usersAPI,{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({username:u,password:p,avatar})
+  }).then(r=>r.json());
   if(res.error){ alert(res.error); return; }
   alert("Cadastro realizado!");
   showLogin();
