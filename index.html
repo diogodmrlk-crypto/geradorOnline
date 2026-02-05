@@ -50,7 +50,6 @@ a.button:hover { background:#32a532; }
 <div id="main"></div>
 
 <script>
-// Variáveis
 let currentUser = null;
 const discordLink = "https://discord.gg/seulink";
 const apiURL = "https://teste-api-mcok.vercel.app/keys";
@@ -190,7 +189,23 @@ async function createKey(){
   alert("Key gerada: "+key);
 }
 
-function listKeys(){ const div = document.getElementById("keys"); if(!div) return; div.innerHTML=""; if(!currentUser.keys) currentUser.keys=[]; currentUser.keys.forEach(k=>{ const d = document.createElement("div"); d.innerHTML=`${k.key} - ${k.type} - Device: ${k.deviceUsed?'Usado':'Não usado'}`; div.appendChild(d); }); }
+// List keys do usuário
+function listKeys(){
+  const div = document.getElementById("keys"); if(!div) return; div.innerHTML="";
+  if(!currentUser.keys) currentUser.keys=[];
+  currentUser.keys.forEach((k,index)=>{
+    const d = document.createElement("div");
+    d.innerHTML=`${k.key} - ${k.type} - Device: ${k.deviceUsed?'Usado':'Não usado'}`;
+    // Botões só para usuários com plano
+    if(currentUser.plan){
+      const btnDelete = document.createElement("button"); btnDelete.textContent="Excluir"; btnDelete.onclick=()=>{ currentUser.keys.splice(index,1); saveUser(); listKeys(); };
+      const btnRevoke = document.createElement("button"); btnRevoke.textContent="Revogar"; btnRevoke.onclick=()=>{ k.revoked=true; saveUser(); listKeys(); };
+      const btnReset = document.createElement("button"); btnReset.textContent="Resetar Device"; btnReset.onclick=()=>{ k.deviceUsed=false; saveUser(); listKeys(); };
+      d.appendChild(btnDelete); d.appendChild(btnRevoke); d.appendChild(btnReset);
+    }
+    div.appendChild(d);
+  });
+}
 
 // Admin criar key global
 async function adminCreateKey(){
