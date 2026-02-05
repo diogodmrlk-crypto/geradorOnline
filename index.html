@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Ferrao Generator</title>
+<title>Hospedagem brasileira</title>
 <style>
 * { margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI', Tahoma, sans-serif; }
 body { background:#0f1e0f; color:#fff; display:flex; flex-direction:column; align-items:center; min-height:100vh; transition:0.3s; overflow-x:hidden;}
@@ -33,7 +33,7 @@ a.button:hover { background:#32a532; }
 <body>
 
 <header>
-  <div>HOSPEDAGEM DE KEYS!</div>
+  <div>Ferrao Generator</div>
   <div>
     <span id="userHeader"></span>
     <span class="logout" onclick="logout()">Sair</span>
@@ -75,8 +75,8 @@ function scrollEffect(){ const cards=document.querySelectorAll(".card"); window.
 function showHome(){
   document.getElementById("main").innerHTML = `
     <h1>Bem-vindo ao Ferrao Generator</h1>
-    <div class="card show"><h2>Funcionalidades</h2><p>Gerar keys, gerenciar plano, avatar, dashboard completo.</p></div>
-    <div class="card show"><h2>Segurança</h2><p>Controle de limite de keys, revogação e devices reset.</p></div>
+    <div class="card show"><h2>Funcionalidades</h2><p>Integrecao online com seu script, gerencie keys e lucra!</p></div>
+    <div class="card show"><h2>Segurança</h2><p>Sistema protegido por HWID, sem vazamentos e compartilhamentos das keys.</p></div>
     <div class="card show"><h2>Planos</h2><p>Escolha seu plano e tenha acesso às funcionalidades.</p><a href="${discordLink}" target="_blank" class="button">Adquirir Plano</a></div>
   `;
   scrollEffect();
