@@ -1,21 +1,10 @@
-import fs from "fs";
-
-export default function handler(req, res) {
-  const { type } = req.body;
-
-  const data = JSON.parse(fs.readFileSync("data.json"));
-
-  const key = "FERRAO-" + Math.random().toString(36).substring(2, 10).toUpperCase();
-
-  data.keys.push({
-    key,
-    type,
-    used: false,
-    revoked: false,
-    createdAt: new Date().toISOString()
+export default async function handler(req,res){
+  const type=req.body.type;
+  const response = await fetch("https://teste-api-mcok.vercel.app/keys",{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({type})
   });
-
-  fs.writeFileSync("data.json", JSON.stringify(data, null, 2));
-
-  res.json({ key });
+  const data = await response.json();
+  res.json(data);
 }
