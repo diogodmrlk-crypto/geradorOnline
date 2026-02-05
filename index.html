@@ -5,23 +5,25 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Ferrao Generator</title>
 <style>
-  * { margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI', Tahoma, sans-serif; }
-  body { background:#121212; color:#fff; display:flex; flex-direction:column; align-items:center; min-height:100vh; }
-  header { width:100%; background:#1f1f1f; padding:15px 20px; display:flex; justify-content:space-between; align-items:center; box-shadow:0 2px 10px rgba(0,0,0,0.5); }
-  .menu { font-size:28px; cursor:pointer; user-select:none; }
-  .dropdown { display:none; flex-direction:column; background:#2a2a2a; width:100%; text-align:center; }
-  .dropdown a { padding:12px; text-decoration:none; color:#fff; border-bottom:1px solid #333; transition:0.2s; }
-  .dropdown a:hover { background:#3a3a3a; }
-  h1,h2,h3 { margin:20px 0; text-align:center; }
-  .card { background:#1e1e1e; padding:20px; border-radius:12px; margin:15px 0; width:90%; max-width:450px; box-shadow:0 4px 20px rgba(0,0,0,0.5); text-align:center; transition:0.3s; }
-  .card:hover { transform: translateY(-3px); }
-  button { background:#ff5722; color:#fff; border:none; padding:12px 25px; margin:10px 0; border-radius:8px; cursor:pointer; font-weight:bold; transition:0.3s; }
-  button:hover { background:#ff7043; }
-  input { width:90%; padding:12px; margin:8px 0; border-radius:8px; border:none; background:#2a2a2a; color:#fff; }
-  input::placeholder { color:#aaa; }
-  #keys div { background:#333; margin:5px 0; padding:8px; border-radius:5px; word-wrap:break-word; display:flex; justify-content:space-between; align-items:center; }
-  #keys div button { background:#ff4444; padding:5px 10px; font-size:12px; margin:0; border-radius:5px; cursor:pointer; }
-  @media(max-width:600px){ h1,h2,h3{ font-size:22px;} button,input{ width:95%; font-size:16px; } }
+/* ====== RESET & BASE ====== */
+* { margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI', Tahoma, sans-serif; }
+body { background:#121212; color:#fff; display:flex; flex-direction:column; align-items:center; min-height:100vh; }
+header { width:100%; background:#1f1f1f; padding:15px 20px; display:flex; justify-content:space-between; align-items:center; box-shadow:0 2px 10px rgba(0,0,0,0.5); border-radius:0 0 12px 12px; }
+.menu { font-size:28px; cursor:pointer; user-select:none; }
+.dropdown { display:none; flex-direction:column; background:#2a2a2a; width:100%; text-align:center; border-radius:0 0 12px 12px; }
+.dropdown a { padding:12px; text-decoration:none; color:#fff; border-bottom:1px solid #333; transition:0.2s; }
+.dropdown a:hover { background:#3a3a3a; }
+h1,h2,h3,h4,h5,h6 { margin:15px 0; text-align:center; }
+.card { background:#1e1e1e; padding:20px; border-radius:15px; margin:15px 0; width:90%; max-width:500px; box-shadow:0 4px 20px rgba(0,0,0,0.5); text-align:center; transition:0.3s; }
+.card:hover { transform: translateY(-3px); }
+button { background:#ff5722; color:#fff; border:none; padding:12px 25px; margin:10px 5px; border-radius:12px; cursor:pointer; font-weight:bold; transition:0.3s; }
+button:hover { background:#ff7043; }
+input, select { width:90%; padding:12px; margin:8px 0; border-radius:8px; border:none; background:#2a2a2a; color:#fff; }
+input::placeholder { color:#aaa; }
+#keys div, #users div { background:#333; margin:5px 0; padding:10px; border-radius:10px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; }
+#keys div button, #users div button { background:#ff4444; padding:5px 10px; font-size:12px; margin:3px; border-radius:6px; cursor:pointer; }
+#keys div span, #users div span { margin:3px; }
+@media(max-width:600px){ h1,h2,h3{ font-size:22px;} button,input,select{ width:95%; font-size:16px; } }
 </style>
 </head>
 <body>
@@ -40,21 +42,25 @@
 <div id="main"></div>
 
 <script>
-// ====== Variáveis Globais ======
+// ====== VARIÁVEIS ======
 let currentUser = null;
 const apiKeys = "https://teste-api-mcok.vercel.app/keys";
 
-// ====== Menu ======
+// ====== MENU ======
 function toggleMenu(){
   const dd = document.getElementById("dropdown");
   dd.style.display = dd.style.display==='flex'?'none':'flex';
 }
 
-// ====== Páginas ======
+// ====== PAGINAS ======
 function showHome(){
   document.getElementById("main").innerHTML = `
     <h1>Bem-vindo ao Ferrao Generator</h1>
     <p>Login ou cadastre-se para gerar keys</p>
+    <div class="card">
+      <h2>Como Funciona:</h2>
+      <p>Escolha seu plano, gere keys de acordo com o limite e gerencie seus dispositivos.</p>
+    </div>
   `;
 }
 
@@ -80,31 +86,40 @@ function showRegister(){
   `;
 }
 
+// ====== DASHBOARD ======
 function showDashboard(){
   if(currentUser.admin){
     document.getElementById("main").innerHTML = `
       <h2>Painel Admin</h2>
-      <button onclick="createKey()">Criar Key</button>
-      <h3>Keys:</h3>
-      <div id="keys"></div>
+      <div class="card">
+        <button onclick="createKey()">Criar Key</button>
+      </div>
+      <h3>Usuários Registrados</h3>
+      <div id="users"></div>
     `;
-    listKeys();
+    listUsers();
   } else {
     document.getElementById("main").innerHTML = `
       <h2>Dashboard Usuário</h2>
-      <button onclick="createKey()">Gerar Key</button>
+      <div class="card">
+        <p>Plano: ${currentUser.plan||'Nenhum'}</p>
+        <p>Keys Geradas: ${currentUser.keysGenerated||0}/${currentUser.planLimit||0}</p>
+        <button onclick="createKey()">Gerar Key</button>
+      </div>
+      <h3>Suas Keys</h3>
       <div id="keys"></div>
     `;
     listKeys();
   }
 }
 
-// ====== LocalStorage Users ======
+// ====== LOCALSTORAGE ======
 function getData(){ 
-  return JSON.parse(localStorage.getItem("db") || '{"users":[{"username":"Ferraodev","password":"Diogomiranda00k","admin":true}]}'); 
+  return JSON.parse(localStorage.getItem("db") || '{"users":[{"username":"Ferraodev","password":"Diogomiranda00k","admin":true,"plan":"infinite","planEnd":null,"keysGenerated":0,"planLimit":0,"devices":[],"keys":[]}]}' ); 
 }
 function saveData(d){ localStorage.setItem("db", JSON.stringify(d)); }
 
+// ====== LOGIN ======
 async function login(){
   const u = document.getElementById("loginUser").value;
   const p = document.getElementById("loginPass").value;
@@ -113,23 +128,127 @@ async function login(){
   if(!user){ alert("Login inválido"); return; }
   currentUser = user;
   showDashboard();
+  if(!currentUser.admin){ startPlanTimer(); }
 }
 
+// ====== CADASTRO ======
 async function register(){
   const u = document.getElementById("regUser").value;
   const p = document.getElementById("regPass").value;
   let db = getData();
-  if(db.users.find(x => x.username===u)){ alert("Usuário já existe"); return; }
-  let newUser = {username:u, password:p, admin:false};
+  if(db.users.find(x=>x.username===u)){ alert("Usuário já existe"); return; }
+  let newUser = {username:u,password:p,admin:false,plan:null,planEnd:null,keysGenerated:0,planLimit:0,devices:[],keys:[]};
   db.users.push(newUser);
   saveData(db);
   alert("Cadastro realizado!");
   showLogin();
 }
 
-// ====== Keys API ======
+// ====== PLAN TIMER ======
+function startPlanTimer(){
+  if(!currentUser.planEnd) return;
+  const interval = setInterval(()=>{
+    const now = new Date();
+    const end = new Date(currentUser.planEnd);
+    const diff = end - now;
+    if(diff<=0){
+      currentUser.plan = null;
+      currentUser.planEnd = null;
+      currentUser.planLimit = 0;
+      currentUser.keysGenerated = 0;
+      saveUser();
+      clearInterval(interval);
+      alert("Seu plano expirou!");
+      showDashboard();
+      return;
+    }
+    const days = Math.floor(diff/1000/60/60/24);
+    const hours = Math.floor(diff/1000/60/60)%24;
+    const mins = Math.floor(diff/1000/60)%60;
+    const secs = Math.floor(diff/1000)%60;
+    const timerDiv = document.querySelector(".card p:nth-child(2)");
+    if(timerDiv) timerDiv.textContent = `Tempo restante do plano: ${days}d ${hours}h ${mins}m ${secs}s`;
+  },1000);
+}
+
+// ====== USERS ADMIN ======
+function listUsers(){
+  const db = getData();
+  const div = document.getElementById("users");
+  div.innerHTML = "";
+  db.users.forEach(u=>{
+    const d = document.createElement("div");
+    d.innerHTML = `
+      <span>${u.username}</span>
+      <span>Plano: ${u.plan||'Nenhum'}</span>
+      <span>Keys: ${u.keysGenerated||0}/${u.planLimit||0}</span>
+    `;
+    if(currentUser.admin){
+      const btnPlan = document.createElement("button");
+      btnPlan.textContent = "Definir Plano";
+      btnPlan.onclick = ()=>setPlan(u.username);
+      const btnReset = document.createElement("button");
+      btnReset.textContent = "Resetar Device";
+      btnReset.onclick = ()=>resetDevice(u.username);
+      const btnRevoke = document.createElement("button");
+      btnRevoke.textContent = "Revogar Plano";
+      btnRevoke.onclick = ()=>revokePlan(u.username);
+      d.appendChild(btnPlan);
+      d.appendChild(btnReset);
+      d.appendChild(btnRevoke);
+    }
+    div.appendChild(d);
+  });
+}
+
+// ====== ADMIN ACTIONS ======
+function setPlan(username){
+  const db = getData();
+  const user = db.users.find(u=>u.username===username);
+  if(!user) return;
+  const plan = prompt("Digite o plano: (basico/avancado/ilimitado)");
+  let limit = 0;
+  let days = 0;
+  if(plan==="basico"){ limit=500; days=30; }
+  if(plan==="avancado"){ limit=2000; days=60; }
+  if(plan==="ilimitado"){ limit=0; days=3650; } // 10 anos como ilimitado
+  user.plan = plan;
+  user.planLimit = limit;
+  user.planEnd = new Date(Date.now() + days*24*60*60*1000).toISOString();
+  saveData(db);
+  listUsers();
+  alert(`Plano ${plan} definido para ${username}`);
+}
+
+function resetDevice(username){
+  const db = getData();
+  const user = db.users.find(u=>u.username===username);
+  if(!user) return;
+  user.devices = [];
+  saveData(db);
+  alert(`Devices de ${username} resetados!`);
+}
+
+function revokePlan(username){
+  const db = getData();
+  const user = db.users.find(u=>u.username===username);
+  if(!user) return;
+  user.plan = null;
+  user.planEnd = null;
+  user.keysGenerated = 0;
+  user.planLimit = 0;
+  saveData(db);
+  listUsers();
+  alert(`Plano revogado de ${username}`);
+}
+
+// ====== KEYS API ======
 async function createKey(){
-  const type = prompt("Tipo (hour/day/month/year)");
+  if(!currentUser.admin && currentUser.planLimit && currentUser.keysGenerated>=currentUser.planLimit){
+    alert("Você atingiu o limite de keys do plano!");
+    return;
+  }
+  const type = prompt("Tipo de key (hour/day/month/year)");
   if(!type) return;
   try{
     const res = await fetch(apiKeys,{
@@ -139,7 +258,12 @@ async function createKey(){
     });
     const data = await res.json();
     alert("Key gerada: "+data.key);
+    if(!currentUser.admin){
+      currentUser.keysGenerated++;
+      saveUser();
+    }
     listKeys();
+    if(!currentUser.admin){ startPlanTimer(); }
   }catch(e){ alert("Erro ao gerar key"); console.error(e); }
 }
 
@@ -171,7 +295,14 @@ async function revokeKey(key){
   }catch(e){ alert("Erro ao revogar"); }
 }
 
-// ====== Inicialização ======
+// ====== UTILS ======
+function saveUser(){
+  const db = getData();
+  const index = db.users.findIndex(u=>u.username===currentUser.username);
+  if(index>=0){ db.users[index]=currentUser; saveData(db); }
+}
+
+// ====== INIT ======
 showHome();
 </script>
 
