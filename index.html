@@ -5,7 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Ferrao Generator</title>
 <style>
-/* RESET & BASE */
 * { margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI', Tahoma, sans-serif; }
 body { background:#0f1e0f; color:#fff; display:flex; flex-direction:column; align-items:center; min-height:100vh; transition:0.3s; overflow-x:hidden;}
 header { width:100%; background:#1b3a1b; padding:15px 20px; display:flex; justify-content:space-between; align-items:center; border-radius:0 0 12px 12px; box-shadow:0 2px 10px rgba(0,0,0,0.5);}
@@ -25,7 +24,7 @@ input::placeholder { color:#aaa; }
 #keys div, #users div { background:#2a5a2a; margin:5px 0; padding:10px; border-radius:15px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; }
 #keys div button, #users div button { background:#ff4444; padding:5px 10px; font-size:12px; margin:3px; border-radius:6px; cursor:pointer; }
 #keys div span, #users div span { margin:3px; }
-.logout { background:#ff4444; padding:8px 16px; border-radius:12px; cursor:pointer; font-weight:bold; float:right; margin-right:10px;}
+.logout { background:#ff4444; padding:8px 16px; border-radius:12px; cursor:pointer; float:right; margin-right:10px; display:none; }
 a.button { text-decoration:none; display:inline-block; background:#3fc03f; padding:12px 25px; border-radius:12px; color:#fff; margin-top:10px; transition:0.3s; }
 a.button:hover { background:#32a532; }
 @media(max-width:600px){ h1,h2,h3{ font-size:22px;} button,input,select{ width:95%; font-size:16px; } .user-info{flex-direction:column;align-items:flex-start;}}
@@ -37,7 +36,7 @@ a.button:hover { background:#32a532; }
   <div>Ferrao Generator</div>
   <div>
     <span id="userHeader"></span>
-    <span class="logout" onclick="logout()" style="display:none;">Sair</span>
+    <span class="logout" onclick="logout()">Sair</span>
     <div class="menu" onclick="toggleMenu()">☰</div>
   </div>
 </header>
@@ -51,39 +50,51 @@ a.button:hover { background:#32a532; }
 <div id="main"></div>
 
 <script>
-// VARIÁVEIS
+// Variáveis
 let currentUser = null;
-const apiKeys = "https://teste-api-mcok.vercel.app/keys";
-const discordLink = "https://discord.gg/seulink"; // Coloque seu discord aqui
+const discordLink = "https://discord.gg/seulink"; // coloque seu Discord aqui
 
-// MENU
+// Funções de menu
 function toggleMenu(){
   const dd = document.getElementById("dropdown");
   dd.style.display = dd.style.display==='flex'?'none':'flex';
 }
 
-// PÁGINAS
+// LocalStorage helpers
+function getData(){ 
+  return JSON.parse(localStorage.getItem("db") || '{"users":[{"username":"Ferraodev","password":"Diogomiranda00k","admin":true,"plan":"ilimitado","planEnd":null,"keysGenerated":0,"planLimit":0,"avatar":""}]}'); 
+}
+function saveData(d){ localStorage.setItem("db", JSON.stringify(d)); }
+function saveUser(){ 
+  const db = getData(); 
+  const idx = db.users.findIndex(u=>u.username===currentUser.username); 
+  if(idx>=0){ db.users[idx]=currentUser; saveData(db); } 
+}
+
+// Scroll animation
+function scrollEffect(){
+  const cards=document.querySelectorAll(".card");
+  window.addEventListener("scroll",()=>{ 
+    const trigger=window.innerHeight*0.9; 
+    cards.forEach(card=>{ 
+      const top=card.getBoundingClientRect().top; 
+      if(top<trigger) card.classList.add("show"); 
+    }); 
+  });
+}
+
+// Home
 function showHome(){
   document.getElementById("main").innerHTML = `
     <h1>Bem-vindo ao Ferrao Generator</h1>
-    <div class="card show">
-      <h2>Funcionalidades</h2>
-      <p>Gerar keys, gerenciar plano, avatar, dashboard completo.</p>
-    </div>
-    <div class="card show">
-      <h2>Segurança</h2>
-      <p>Controle de limite de keys, revogação e devices reset.</p>
-    </div>
-    <div class="card show">
-      <h2>Planos</h2>
-      <p>Escolha seu plano e tenha acesso às funcionalidades.</p>
-      <a href="${discordLink}" target="_blank" class="button">Adquirir Plano</a>
-    </div>
+    <div class="card show"><h2>Funcionalidades</h2><p>Gerar keys, gerenciar plano, avatar, dashboard completo.</p></div>
+    <div class="card show"><h2>Segurança</h2><p>Controle de limite de keys, revogação e devices reset.</p></div>
+    <div class="card show"><h2>Planos</h2><p>Escolha seu plano e tenha acesso às funcionalidades.</p><a href="${discordLink}" target="_blank" class="button">Adquirir Plano</a></div>
   `;
   scrollEffect();
 }
 
-// LOGIN / REGISTER
+// Login / Register
 function showLogin(){
   document.getElementById("main").innerHTML = `
     <div class="card show">
@@ -99,9 +110,7 @@ function showRegister(){
   document.getElementById("main").innerHTML = `
     <div class="card show">
       <h2>Cadastrar</h2>
-      <div>
-        <img src="https://via.placeholder.com/60" class="avatar" id="regAvatar" onclick="uploadAvatar(this)">
-      </div>
+      <div><img src="https://via.placeholder.com/60" class="avatar" id="regAvatar" onclick="uploadAvatar(this)"></div>
       <input type="text" id="regUser" placeholder="Usuário">
       <input type="password" id="regPass" placeholder="Senha">
       <button onclick="register()">Cadastrar</button>
@@ -109,16 +118,67 @@ function showRegister(){
   `;
 }
 
-// DASHBOARD
+// Login / Register funcional
+function login(){
+  const u = document.getElementById("loginUser").value;
+  const p = document.getElementById("loginPass").value;
+  const db = getData();
+  const user = db.users.find(x=>x.username===u && x.password===p);
+  if(!user){ alert("Login inválido"); return; }
+  currentUser = user;
+  showDashboard();
+}
+
+function register(){
+  const u = document.getElementById("regUser").value;
+  const p = document.getElementById("regPass").value;
+  const db = getData();
+  if(db.users.find(x=>x.username===u)){ alert("Usuário já existe"); return; }
+  const avatar = document.getElementById("regAvatar").src;
+  const newUser = {username:u,password:p,admin:false,plan:null,planEnd:null,keysGenerated:0,planLimit:0,devices:[],keys:[],avatar:avatar};
+  db.users.push(newUser);
+  saveData(db);
+  alert("Cadastro realizado!");
+  showLogin();
+}
+
+// Avatar
+function uploadAvatar(img){
+  const file = document.createElement("input");
+  file.type="file"; file.accept="image/*";
+  file.onchange = e=>{
+    const reader = new FileReader();
+    reader.onload = ()=>{ img.src = reader.result; }
+    reader.readAsDataURL(e.target.files[0]);
+  }
+  file.click();
+}
+
+function changeAvatar(){
+  uploadAvatar(document.querySelector(".avatar"));
+  const db = getData();
+  const idx = db.users.findIndex(u=>u.username===currentUser.username);
+  if(idx>=0){ db.users[idx].avatar=document.querySelector(".avatar").src; saveData(db);}
+}
+
+// Logout
+function logout(){
+  currentUser=null;
+  document.querySelector(".logout").style.display="none";
+  document.getElementById("userHeader").textContent="";
+  showHome();
+}
+
+// Dashboard
 function showDashboard(){
-  document.querySelector(".logout").style.display = "inline-block";
+  document.querySelector(".logout").style.display="inline-block";
   document.getElementById("userHeader").textContent = `${currentUser.username} (${currentUser.plan||'Sem plano'})`;
 
   if(currentUser.admin){
     document.getElementById("main").innerHTML = `
       <h2>Painel Admin</h2>
       <div class="card show">
-        <button onclick="createKey()">Criar Key</button>
+        <button onclick="adminCreateKey()">Criar Key</button>
       </div>
       <h3>Usuários Registrados</h3>
       <div id="users"></div>
@@ -144,117 +204,34 @@ function showDashboard(){
   }
 }
 
-// LOCALSTORAGE
-function getData(){ 
-  return JSON.parse(localStorage.getItem("db") || '{"users":[{"username":"Ferraodev","password":"Diogomiranda00k","admin":true,"plan":"ilimitado","planEnd":null,"keysGenerated":0,"planLimit":0,"avatar":""}]}'); 
-}
-function saveData(d){ localStorage.setItem("db", JSON.stringify(d)); }
-
-// LOGIN / REGISTER
-function login(){
-  const u = document.getElementById("loginUser").value;
-  const p = document.getElementById("loginPass").value;
-  const db = getData();
-  const user = db.users.find(x=>x.username===u && x.password===p);
-  if(!user){ alert("Login inválido"); return; }
-  currentUser = user;
-  showDashboard();
-}
-
-function register(){
-  const u = document.getElementById("regUser").value;
-  const p = document.getElementById("regPass").value;
-  const db = getData();
-  if(db.users.find(x=>x.username===u)){ alert("Usuário já existe"); return; }
-  const avatar = document.getElementById("regAvatar").src;
-  const newUser = {username:u,password:p,admin:false,plan:null,planEnd:null,keysGenerated:0,planLimit:0,devices:[],keys:[],avatar:avatar};
-  db.users.push(newUser);
-  saveData(db);
-  alert("Cadastro realizado!");
-  showLogin();
-}
-
-// AVATAR
-function uploadAvatar(img){
-  const file = document.createElement("input");
-  file.type="file"; file.accept="image/*";
-  file.onchange = e=>{
-    const reader = new FileReader();
-    reader.onload = ()=>{ img.src = reader.result; }
-    reader.readAsDataURL(e.target.files[0]);
-  }
-  file.click();
-}
-
-function changeAvatar(){
-  uploadAvatar(document.querySelector(".avatar"));
-  const db = getData();
-  const index = db.users.findIndex(u=>u.username===currentUser.username);
-  if(index>=0){
-    db.users[index].avatar = document.querySelector(".avatar").src;
-    saveData(db);
-  }
-}
-
-// LOGOUT
-function logout(){
-  currentUser=null;
-  document.querySelector(".logout").style.display="none";
-  document.getElementById("userHeader").textContent="";
-  showHome();
-}
-
-// KEYS
-async function createKey(){
-  if(!currentUser.admin && currentUser.planLimit && currentUser.keysGenerated>=currentUser.planLimit){
-    alert("Você atingiu o limite de keys do seu plano!");
-    return;
-  }
-  if(!currentUser.plan && !currentUser.admin){ alert("Adquira um plano para gerar keys!"); return;}
+// KEYS salvas no localStorage
+function createKey(){
+  if(!currentUser.plan && !currentUser.admin){ alert("Adquira um plano!"); return; }
+  if(currentUser.planLimit && currentUser.keysGenerated>=currentUser.planLimit){ alert("Limite de keys atingido!"); return; }
   const type = prompt("Tipo de key (hour/day/month/year)");
   if(!type) return;
-  try{
-    const res = await fetch(apiKeys,{
-      method:"POST",
-      headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({type})
-    });
-    const data = await res.json();
-    let finalKey = data.key;
-    if(!finalKey.startsWith("FERRAO-CHEATS-")){
-      finalKey = "FERRAO-CHEATS-" + finalKey;
-    }
-    alert("Key gerada: "+finalKey);
-    if(!currentUser.admin){ currentUser.keysGenerated++; saveUser(); }
-    listKeys();
-  }catch(e){ alert("Erro ao gerar key"); console.error(e); }
+  const random = Math.random().toString(36).substring(2,10).toUpperCase();
+  const key = `FERRAO-CHEATS-${random}`;
+  const keyObj = {key:key,type:type,deviceUsed:false};
+  currentUser.keys.push(keyObj);
+  currentUser.keysGenerated++;
+  saveUser();
+  listKeys();
+  alert("Key gerada: "+key);
 }
 
-async function listKeys(){
-  try{
-    const res = await fetch(apiKeys);
-    const keys = await res.json();
-    const div = document.getElementById("keys"); if(!div) return;
-    div.innerHTML = "";
-    keys.forEach(k=>{
-      let finalKey = k.key;
-      if(!finalKey.startsWith("FERRAO-CHEATS-")) finalKey="FERRAO-CHEATS-"+finalKey;
-      const d = document.createElement("div");
-      d.innerHTML = `${finalKey} - ${k.type} - Revoked: ${k.revoked}`;
-      if(currentUser.admin){
-        const btn = document.createElement("button");
-        btn.textContent="Revogar"; btn.onclick = ()=>revokeKey(k.key); d.appendChild(btn);
-      }
-      div.appendChild(d);
-    });
-  }catch(e){ console.error(e); }
+function listKeys(){
+  const div = document.getElementById("keys"); if(!div) return;
+  div.innerHTML="";
+  if(!currentUser.keys) currentUser.keys=[];
+  currentUser.keys.forEach(k=>{
+    const d = document.createElement("div");
+    d.innerHTML=`${k.key} - ${k.type} - Device: ${k.deviceUsed?'Usado':'Não usado'}`;
+    div.appendChild(d);
+  });
 }
 
-async function revokeKey(key){
-  try{ await fetch(`${apiKeys}/${key}`,{method:"PATCH"}); listKeys(); }catch(e){ alert("Erro ao revogar"); }
-}
-
-// ADMIN USERS
+// Admin users
 function listUsers(){
   const db = getData();
   const div = document.getElementById("users"); if(!div) return;
@@ -262,17 +239,24 @@ function listUsers(){
   db.users.forEach(u=>{
     const d = document.createElement("div");
     d.innerHTML=`<img src="${u.avatar||'https://via.placeholder.com/60'}" class="avatar"> <span>${u.username}</span> <span>Plano: ${u.plan||'Nenhum'}</span> <span>Keys: ${u.keysGenerated||0}/${u.planLimit||0}</span>`;
-    if(currentUser.admin){
-      const btnPlan=document.createElement("button"); btnPlan.textContent="Definir Plano"; btnPlan.onclick=()=>setPlan(u.username);
-      const btnReset=document.createElement("button"); btnReset.textContent="Resetar Device"; btnReset.onclick=()=>resetDevice(u.username);
-      const btnRevoke=document.createElement("button"); btnRevoke.textContent="Revogar Plano"; btnRevoke.onclick=()=>revokePlan(u.username);
-      d.appendChild(btnPlan); d.appendChild(btnReset); d.appendChild(btnRevoke);
-    }
     div.appendChild(d);
   });
 }
 
-function setPlan(username){
-  const db=getData(); const user=db.users.find(u=>u.username===username); if(!user) return;
-  const plan=prompt("Digite o plano (basico/avancado/ilimitado)"); let limit=0, days=0;
-  if(plan==="basico"){ limit=500; days=
+// Timer do plano
+function startPlanTimer(){
+  const interval=setInterval(()=>{
+    if(!currentUser.planEnd) return;
+    const now=new Date(); const end=new Date(currentUser.planEnd); const diff=end-now;
+    if(diff<=0){ currentUser.plan=null; currentUser.planEnd=null; currentUser.planLimit=0; currentUser.keysGenerated=0; saveUser(); clearInterval(interval); alert("Seu plano expirou!"); showDashboard(); return;}
+    const days=Math.floor(diff/1000/60/60/24); const hours=Math.floor(diff/1000/60/60)%24; const mins=Math.floor(diff/1000/60)%60; const secs=Math.floor(diff/1000)%60;
+    const timerDiv=document.getElementById("timer"); if(timerDiv) timerDiv.textContent=`Tempo restante do plano: ${days}d ${hours}h ${mins}m ${secs}s`;
+  },1000);
+}
+
+// Init
+showHome();
+</script>
+
+</body>
+</html>
