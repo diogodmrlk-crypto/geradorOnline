@@ -2,22 +2,148 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Ferrao Generator</title>
-<link rel="stylesheet" href="style.css">
+<style>
+  body { font-family: Arial; margin:0; padding:0; background:#121212; color:#fff; display:flex; flex-direction:column; align-items:center; }
+  header { width:100%; background:#1f1f1f; padding:15px; display:flex; justify-content:space-between; align-items:center; }
+  .menu { font-size:30px; cursor:pointer; }
+  .dropdown { display:none; flex-direction:column; background:#2a2a2a; width:100%; text-align:center; }
+  .dropdown a { padding:10px; text-decoration:none; color:#fff; border-bottom:1px solid #333; }
+  h1,h2 { margin:20px 0; }
+  .card { background:#1e1e1e; padding:15px; border-radius:10px; margin:10px 0; width:90%; max-width:500px; }
+  button { background:#ff5722; color:#fff; border:none; padding:10px 20px; margin:10px 0; border-radius:5px; cursor:pointer; }
+  input { width:90%; padding:10px; margin:5px 0; border-radius:5px; border:none; }
+  #keys div { background:#333; margin:5px 0; padding:5px; border-radius:5px; }
+  @media(max-width:600px){ h1,h2{ font-size:24px;} button,input{ width:95%; font-size:16px; } }
+</style>
 </head>
 <body>
 
-<div class="menu" onclick="toggleMenu()">☰</div>
+<header>
+  <div>Ferrao Generator</div>
+  <div class="menu" onclick="toggleMenu()">☰</div>
+</header>
 
 <div id="dropdown" class="dropdown">
-  <a href="index.html">Home</a>
-  <a href="#" onclick="login()">Entrar</a>
-  <a href="#" onclick="register()">Cadastrar</a>
+  <a href="#" onclick="showHome()">Home</a>
+  <a href="#" onclick="showLogin()">Entrar</a>
+  <a href="#" onclick="showRegister()">Cadastrar</a>
 </div>
 
-<h1>Ferrao Generator</h1>
-<div id="auth"></div>
+<div id="main"></div>
 
-<script src="script.js"></script>
+<script>
+let currentUser = null;
+
+function toggleMenu() {
+  const dd = document.getElementById("dropdown");
+  dd.style.display = dd.style.display==='flex'?'none':'flex';
+}
+
+function showHome() {
+  document.getElementById("main").innerHTML = `<h1>Bem-vindo ao Ferrao Generator</h1><p>Login ou Cadastre-se para gerar keys</p>`;
+}
+
+function showLogin() {
+  document.getElementById("main").innerHTML = `
+    <div class="card">
+      <h2>Entrar</h2>
+      <input type="text" id="loginUser" placeholder="Usuário">
+      <input type="password" id="loginPass" placeholder="Senha">
+      <button onclick="login()">Entrar</button>
+    </div>
+  `;
+}
+
+function showRegister() {
+  document.getElementById("main").innerHTML = `
+    <div class="card">
+      <h2>Cadastrar</h2>
+      <input type="text" id="regUser" placeholder="Usuário">
+      <input type="password" id="regPass" placeholder="Senha">
+      <button onclick="register()">Cadastrar</button>
+    </div>
+  `;
+}
+
+function showDashboard() {
+  if(currentUser.admin){
+    document.getElementById("main").innerHTML = `
+      <h2>Painel Admin</h2>
+      <button onclick="generateKey()">Criar Key</button>
+      <h3>Keys:</h3>
+      <div id="keys"></div>
+    `;
+    listKeys();
+  } else {
+    document.getElementById("main").innerHTML = `
+      <h2>Dashboard Usuário</h2>
+      <button onclick="generateKey()">Gerar Key</button>
+      <div id="keys"></div>
+    `;
+    listKeys();
+  }
+}
+
+// --- Funções API ---
+async function login(){
+  const u=document.getElementById("loginUser").value;
+  const p=document.getElementById("loginPass").value;
+  const res=await fetch("/login",{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({username:u,password:p})
+  });
+  const data=await res.json();
+  if(!data.success){ alert("Login inválido"); return; }
+  currentUser={username:u,admin:data.admin};
+  showDashboard();
+}
+
+async function register(){
+  const u=document.getElementById("regUser").value;
+  const p=document.getElementById("regPass").value;
+  const res=await fetch("/register",{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({username:u,password:p})
+  });
+  const data=await res.json();
+  if(!data.success){ alert(data.error); return; }
+  alert("Cadastro realizado!");
+  showLogin();
+}
+
+async function generateKey(){
+  const type=prompt("Tipo (hour/day/month/year)","");
+  if(!type) return;
+  const res=await fetch("/createKey",{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({type})
+  });
+  const data=await res.json();
+  alert("Key gerada: "+data.key);
+  listKeys();
+}
+
+async function listKeys(){
+  const res=await fetch("/getKeys");
+  const keys=await res.json();
+  const div=document.getElementById("keys");
+  if(!div) return;
+  div.innerHTML="";
+  keys.forEach(k=>{
+    const d=document.createElement("div");
+    d.innerHTML=`${k.key} - ${k.type} - Revoked: ${k.revoked}`;
+    div.appendChild(d);
+  });
+}
+
+// Mostrar home por padrão
+showHome();
+</script>
+
 </body>
 </html>
