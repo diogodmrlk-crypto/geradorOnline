@@ -3,44 +3,39 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Ferrao Generator</title>
+<title>Ferrao Panel</title>
 
 <style>
-*{margin:0;padding:0;box-sizing:border-box;font-family:Segoe UI;}
-
 body{
 background:#0f1e0f;
 color:white;
+font-family:Segoe UI;
 display:flex;
 flex-direction:column;
 align-items:center;
-min-height:100vh;
 }
 
 .card{
 background:#1f3a1f;
-padding:25px;
+padding:20px;
 border-radius:20px;
 margin:15px;
 width:95%;
-max-width:700px;
-text-align:center;
+max-width:800px;
 }
 
 button{
 background:#3fc03f;
 border:none;
-padding:12px 25px;
-border-radius:12px;
+padding:10px 20px;
+border-radius:10px;
 color:white;
+margin:5px;
 cursor:pointer;
-margin-top:10px;
 }
 
 select{
-width:90%;
-padding:12px;
-margin:10px;
+padding:10px;
 border-radius:10px;
 border:none;
 background:#225522;
@@ -53,19 +48,18 @@ margin-top:15px;
 border-collapse:collapse;
 }
 
-th,td{
-padding:12px;
+td,th{
+padding:10px;
 border-bottom:1px solid #2c5c2c;
 }
-
-.badge{
-padding:5px 12px;
-border-radius:8px;
-font-size:12px;
+.tab{
+cursor:pointer;
+padding:10px;
+display:inline-block;
+background:#225522;
+margin:5px;
+border-radius:10px;
 }
-
-.badge-ok{background:#a855f7;}
-.badge-off{background:#ff4444;}
 </style>
 </head>
 
@@ -79,8 +73,9 @@ const USERS_API="https://gerador-online-9fqv.vercel.app/dados";
 const KEYS_API="https://teste-api-mcok.vercel.app/keys";
 
 let currentUser=null;
-let refreshInterval=null;
+let selectedUser=null;
 
+// LOGIN
 function home(){
 app.innerHTML=`
 <div class="card">
@@ -93,8 +88,7 @@ app.innerHTML=`
 
 async function login(){
 
-const res=await fetch(USERS_API);
-const users=await res.json();
+const users=await fetch(USERS_API).then(r=>r.json());
 
 const u=user.value;
 const p=pass.value;
@@ -104,10 +98,16 @@ const found=users.find(x=>x.username===u && x.password===p);
 if(!found) return alert("Login inválido");
 
 currentUser=found;
-dashboard();
+
+if(found.admin){
+adminPanel();
+}else{
+userPanel();
+}
 }
 
-function dashboard(){
+// USER DASHBOARD
+function userPanel(){
 
 if(!currentUser.plan){
 app.innerHTML=`<div class="card"><h2>Sem plano</h2></div>`;
@@ -115,50 +115,82 @@ return;
 }
 
 app.innerHTML=`
+
 <div class="card">
 <h2>Gerar Key</h2>
 
 <select id="tipo">
-<option value="1H">1 Hora</option>
-<option value="1D">1 Dia</option>
-<option value="7D">7 Dias</option>
-<option value="30D">30 Dias</option>
-<option value="LIFETIME">Lifetime</option>
+<option value="hour">1 Hora</option>
+<option value="day">1 Dia</option>
+<option value="month">1 Mês</option>
 </select>
 
 <button onclick="generateKey()">Gerar</button>
-
-<p>Keys usadas: <span id="count">${currentUser.keysGenerated||0}</span> / ${currentUser.planLimit}</p>
 </div>
 
 <div class="card">
-<h3>Minhas Chaves</h3>
+<h3>Minhas Keys</h3>
 <table>
 <thead>
 <tr>
 <th>Key</th>
-<th>Tipo</th>
 <th>Status</th>
+<th>Device</th>
+<th>Timer</th>
 <th>Ações</th>
 </tr>
 </thead>
-<tbody id="keysList"></tbody>
+<tbody id="keysTable"></tbody>
 </table>
 </div>
 `;
 
-loadKeys();
-
-if(refreshInterval) clearInterval(refreshInterval);
-refreshInterval=setInterval(loadKeys,3000);
+loadKeys(currentUser.username);
+setInterval(()=>loadKeys(currentUser.username),3000);
 }
 
+// ADMIN
+async function adminPanel(){
+
+const users=await fetch(USERS_API).then(r=>r.json());
+
+app.innerHTML=`
+<div class="card">
+<h2>Admin - Usuários</h2>
+<div id="tabs"></div>
+<div id="adminKeys"></div>
+</div>
+`;
+
+users.forEach(u=>{
+tabs.innerHTML+=`<div class="tab" onclick="openUser('${u.username}')">${u.username}</div>`;
+});
+}
+
+function openUser(username){
+selectedUser=username;
+
+adminKeys.innerHTML=`
+<h3>Keys de ${username}</h3>
+<table>
+<thead>
+<tr>
+<th>Key</th>
+<th>Status</th>
+<th>Device</th>
+<th>Timer</th>
+<th>Ações</th>
+</tr>
+</thead>
+<tbody id="keysTable"></tbody>
+</table>
+`;
+
+loadKeys(username);
+}
+
+// GERAR KEY
 async function generateKey(){
-
-if((currentUser.keysGenerated||0)>=currentUser.planLimit){
-alert("Limite atingido");
-return;
-}
 
 const tipo=document.getElementById("tipo").value;
 
@@ -168,61 +200,84 @@ await fetch(KEYS_API,{
 method:"POST",
 headers:{'Content-Type':'application/json'},
 body:JSON.stringify({
-key:key,
+key,
 type:tipo,
 username:currentUser.username,
-active:true,
-created:new Date().toISOString()
+used:false,
+revoked:false,
+device:null,
+createdAt:new Date().toISOString()
 })
 });
 
-currentUser.keysGenerated=(currentUser.keysGenerated||0)+1;
-count.innerText=currentUser.keysGenerated;
-
-loadKeys();
+loadKeys(currentUser.username);
 }
 
-async function loadKeys(){
+// LOAD KEYS
+async function loadKeys(username){
 
-const res=await fetch(KEYS_API);
-const keys=await res.json();
+const keys=await fetch(KEYS_API).then(r=>r.json());
 
-const myKeys=keys.filter(k=>k.username===currentUser.username);
+const userKeys=keys.filter(k=>k.username===username);
 
-keysList.innerHTML="";
+keysTable.innerHTML="";
 
-myKeys.forEach(k=>{
-keysList.innerHTML+=`
+userKeys.forEach(k=>{
+
+keysTable.innerHTML+=`
 <tr>
 <td>${k.key}</td>
-<td>${k.type}</td>
-<td>
-<span class="badge ${k.active?'badge-ok':'badge-off'}">
-${k.active?'Disponível':'Revogada'}
-</span>
-</td>
+<td>${k.revoked?"Revogada":"Ativa"}</td>
+<td>${k.device||"Nenhum"}</td>
+<td>${timer(k.createdAt,k.type)}</td>
 <td>
 <button onclick="revoke('${k.key}')">Revogar</button>
+<button onclick="reset('${k.key}')">Reset</button>
 <button onclick="del('${k.key}')">Excluir</button>
 </td>
 </tr>`;
 });
 }
 
+// TIMER
+function timer(created,type){
+
+let ms=0;
+
+if(type==="hour") ms=3600000;
+if(type==="day") ms=86400000;
+if(type==="month") ms=2592000000;
+
+let end=new Date(created).getTime()+ms;
+let diff=end-Date.now();
+
+if(diff<=0) return "Expirado";
+
+let m=Math.floor(diff/60000);
+let s=Math.floor((diff%60000)/1000);
+
+return m+"m "+s+"s";
+}
+
+// ACTIONS
 async function revoke(key){
 await fetch(KEYS_API+"/"+key,{
 method:"PUT",
 headers:{'Content-Type':'application/json'},
-body:JSON.stringify({active:false})
+body:JSON.stringify({revoked:true})
 });
-loadKeys();
+}
+
+async function reset(key){
+await fetch(KEYS_API+"/"+key,{
+method:"PUT",
+headers:{'Content-Type':'application/json'},
+body:JSON.stringify({device:null})
+});
 }
 
 async function del(key){
 await fetch(KEYS_API+"/"+key,{method:"DELETE"});
-currentUser.keysGenerated--;
-count.innerText=currentUser.keysGenerated;
-loadKeys();
 }
 
 home();
