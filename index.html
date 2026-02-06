@@ -41,15 +41,15 @@ input{ width:90%; padding:10px; margin:6px 0; border-radius:8px; border:none; ba
 
 <script>
 let currentUser = null;
+
+// APIs
 const USERS_API = "https://gerador-online-9fqv.vercel.app/dados";
 const KEYS_API = "https://teste-api-mcok.vercel.app/keys";
 
-function toggleMenu(){
-  const d = document.getElementById("dropdown");
-  d.style.display = d.style.display==="flex"?"none":"flex";
-}
+// Menu toggle
+function toggleMenu(){ document.getElementById("dropdown").style.display=document.getElementById("dropdown").style.display==="flex"?"none":"flex"; }
 
-// Página inicial com cards de funcionalidades
+// Página inicial com cards
 function showHome(){
   document.getElementById("main").innerHTML = `
     <div class="cards-container">
@@ -89,26 +89,21 @@ async function login(){
   const u = document.getElementById("loginUser").value.trim();
   const p = document.getElementById("loginPass").value.trim();
   const status = document.getElementById("loginStatus");
-  if(!u || !p){ status.innerText="Preencha os campos"; return; }
+  if(!u||!p){ status.innerText="Preencha os campos"; return; }
 
   try{
     const res = await fetch(USERS_API);
     if(!res.ok) throw new Error("Erro HTTP: "+res.status);
     const users = await res.json();
-
     const user = users.find(x=>x.username===u && x.password===p);
     if(!user){ status.innerText="Usuário ou senha inválidos"; return; }
 
-    currentUser = user;
+    currentUser=user;
     showDashboard();
-
-  }catch(e){
-    status.innerText = "Erro ao conectar API";
-    console.error(e);
-  }
+  }catch(e){ status.innerText="Erro ao conectar API"; console.error(e);}
 }
 
-// Registro
+// Cadastro
 function showRegister(){
   document.getElementById("main").innerHTML = `
     <div class="card">
@@ -122,55 +117,39 @@ function showRegister(){
 }
 
 function uploadAvatar(img){
-  const file = document.createElement("input"); file.type="file"; file.accept="image/*";
-  file.onchange = e => {
-    const reader = new FileReader();
-    reader.onload = ()=> img.src = reader.result;
-    reader.readAsDataURL(e.target.files[0]);
-  }
+  const file=document.createElement("input"); file.type="file"; file.accept="image/*";
+  file.onchange=e=>{ const reader=new FileReader(); reader.onload=()=>img.src=reader.result; reader.readAsDataURL(e.target.files[0]); }
   file.click();
 }
 
 async function register(){
-  const u = document.getElementById("regUser").value.trim();
-  const p = document.getElementById("regPass").value.trim();
-  const avatar = document.getElementById("regAvatar").src;
-  const status = document.getElementById("regStatus");
-
-  if(!u || !p){ status.innerText="Preencha os campos!"; return; }
+  const u=document.getElementById("regUser").value.trim();
+  const p=document.getElementById("regPass").value.trim();
+  const avatar=document.getElementById("regAvatar").src;
+  const status=document.getElementById("regStatus");
+  if(!u||!p){status.innerText="Preencha os campos!";return;}
 
   try{
-    const res = await fetch(USERS_API, {
-      method:"POST",
-      headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({ username:u, password:p, avatar })
-    });
-
-    if(!res.ok){
-      const err = await res.json();
-      status.innerText = err.error || "Erro ao criar usuário";
-      return;
-    }
-
-    alert("Cadastro realizado com sucesso! (verifique se a API permite POST para salvar de fato)");
+    const res=await fetch(USERS_API,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({username:u,password:p,avatar})});
+    if(!res.ok){ const err=await res.json(); status.innerText=err.error||"Erro ao criar usuário"; return; }
+    alert("Cadastro realizado com sucesso!");
     showLogin();
-
-  }catch(e){ status.innerText="Erro ao conectar API"; console.error(e); }
+  }catch(e){status.innerText="Erro ao conectar API";console.error(e);}
 }
 
 // Dashboard
 function showDashboard(){
   document.getElementById("btnLogout").style.display="inline-block";
-  document.getElementById("userHeader").textContent = `${currentUser.username} (${currentUser.plan||'Sem plano'})`;
+  document.getElementById("userHeader").textContent=`${currentUser.username} (${currentUser.plan||'Sem plano'})`;
 
   if(currentUser.admin){
-    document.getElementById("main").innerHTML = `
+    document.getElementById("main").innerHTML=`
       <div class="card"><h2>Painel Admin</h2>
         <button onclick="adminLoadUsers()">Carregar Usuários</button>
       </div>
       <div id="usersList"></div>`;
   }else{
-    document.getElementById("main").innerHTML = `
+    document.getElementById("main").innerHTML=`
       <div class="card">
         <h2>Dashboard</h2>
         <img src="${currentUser.avatar}" class="avatar">
@@ -182,16 +161,15 @@ function showDashboard(){
   }
 }
 
-// Admin - Listar usuários
+// Admin funções
 async function adminLoadUsers(){
   try{
-    const res = await fetch(USERS_API);
+    const res=await fetch(USERS_API);
     if(!res.ok) throw new Error("Erro HTTP: "+res.status);
-    const users = await res.json();
-    const div = document.getElementById("usersList");
-    div.innerHTML = "";
+    const users=await res.json();
+    const div=document.getElementById("usersList"); div.innerHTML="";
     users.forEach(u=>{
-      div.innerHTML += `
+      div.innerHTML+=`
       <div class="card">
         <img src="${u.avatar}" class="avatar">
         <p>${u.username} — ${u.plan||'Nenhum'}</p>
@@ -201,72 +179,34 @@ async function adminLoadUsers(){
         <button onclick="promptResetDevice('${u.username}')">Resetar Device</button>
       </div>`;
     });
-  }catch(e){ alert("Erro ao carregar usuários"); console.error(e);}
+  }catch(e){alert("Erro ao carregar usuários");console.error(e);}
 }
 
-// Planos
+// Atribuir plano
 async function promptAssignPlan(username){
-  const plan = prompt("Nome do plano:");
-  const limit = parseInt(prompt("Limite de keys:"));
-  const days = parseInt(prompt("Duração em dias:"));
-  const planEnd = new Date(Date.now()+days*86400000).toISOString();
-
-  try{
-    await fetch(`${USERS_API}/${username}`, {
-      method:"PUT",
-      headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({ plan, planLimit:limit, planEnd })
-    });
-    alert("Plano atribuído!");
-    adminLoadUsers();
-  }catch(e){ alert("Erro ao atualizar plano"); console.error(e);}
+  const plan=prompt("Nome do plano:");
+  const limit=parseInt(prompt("Limite de keys:"));
+  const days=parseInt(prompt("Duração em dias:"));
+  const planEnd=new Date(Date.now()+days*86400000).toISOString();
+  try{await fetch(`${USERS_API}/${username}`,{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({plan,planLimit:limit,planEnd})}); alert("Plano atribuído!"); adminLoadUsers();}catch(e){alert("Erro ao atualizar plano");console.error(e);}
 }
-
-async function promptRevokePlan(username){
-  try{
-    await fetch(`${USERS_API}/${username}`, {
-      method:"PUT",
-      headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({ plan:null, planLimit:0, planEnd:null })
-    });
-    alert("Plano revogado!");
-    adminLoadUsers();
-  }catch(e){ alert("Erro ao revogar plano"); console.error(e);}
+async function promptRevokePlan(username){try{await fetch(`${USERS_API}/${username}`,{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({plan:null,planLimit:0,planEnd:null})}); alert("Plano revogado!"); adminLoadUsers();}catch(e){alert("Erro ao revogar plano");console.error(e);}
 }
-
-async function promptResetDevice(username){
-  try{
-    await fetch(`${USERS_API}/${username}`, {
-      method:"PUT",
-      headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({ device:null })
-    });
-    alert("Device resetado!");
-    adminLoadUsers();
-  }catch(e){ alert("Erro ao resetar device"); console.error(e);}
+async function promptResetDevice(username){try{await fetch(`${USERS_API}/${username}`,{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({device:null})}); alert("Device resetado!"); adminLoadUsers();}catch(e){alert("Erro ao resetar device");console.error(e);}
 }
 
 // Gerar key
 function showGenerateKey(){
   if(!currentUser.plan){ alert("Adquira um plano para gerar keys!"); return; }
-  const tipo = prompt("Tipo de key (hour/day/month/year):");
-  if(!tipo) return;
-
-  const randomStr = Math.random().toString(36).substring(2,10).toUpperCase();
-  const newKey = `FERRAO-CHEATS-${randomStr}`;
-
-  fetch(KEYS_API, { method:"POST", headers:{ "Content-Type":"application/json" }, body:JSON.stringify({ key:newKey, type:tipo, username:currentUser.username, deviceUsed:false }) })
-    .then(()=>alert("Key gerada!"))
-    .catch(()=>alert("Erro ao gerar key"));
+  const tipo=prompt("Tipo de key (hour/day/month/year):"); if(!tipo) return;
+  const randomStr=Math.random().toString(36).substring(2,10).toUpperCase();
+  const newKey=`FERRAO-CHEATS-${randomStr}`;
+  fetch(KEYS_API,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({key:newKey,type:tipo,username:currentUser.username,deviceUsed:false})})
+    .then(()=>alert("Key gerada!")).catch(()=>alert("Erro ao gerar key"));
 }
 
 // Logout
-function logout(){
-  currentUser=null;
-  document.getElementById("btnLogout").style.display="none";
-  document.getElementById("userHeader").textContent="";
-  showHome();
-}
+function logout(){currentUser=null; document.getElementById("btnLogout").style.display="none"; document.getElementById("userHeader").textContent=""; showHome();}
 
 // Inicializa
 showHome();
