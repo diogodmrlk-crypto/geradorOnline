@@ -6,78 +6,132 @@
 <title>Ferrao Generator</title>
 
 <style>
-*{margin:0;padding:0;box-sizing:border-box;font-family:'Segoe UI',Tahoma,sans-serif;}
-body{background:#0f1e0f;color:#fff;display:flex;flex-direction:column;align-items:center;min-height:100vh;}
-header{width:100%;background:#1b3a1b;padding:15px;display:flex;justify-content:space-between;align-items:center;position:relative;}
-.menu{font-size:28px;cursor:pointer;}
-.dropdown{display:none;flex-direction:column;background:#225522;width:100%;position:absolute;top:60px;left:0;z-index:999;}
-.dropdown a{padding:10px;color:#fff;text-decoration:none;}
-.card{background:#1f3a1f;padding:30px;border-radius:20px;margin:20px;width:95%;max-width:600px;text-align:center;transition: all 0.3s;}
-.card:hover{transform: translateY(-5px);box-shadow:0 0 25px #3fc03f;}
-button{background:#3fc03f;color:#fff;border:none;padding:12px 25px;border-radius:12px;cursor:pointer;margin:5px;font-weight:bold;}
-input{width:90%;padding:12px;margin:10px 0;border-radius:10px;border:none;background:#225522;color:#fff;font-size:16px;}
-.avatar{width:80px;height:80px;border-radius:50%;object-fit:cover;border:2px solid #3fc03f;cursor:pointer;margin-bottom:10px;}
+*{margin:0;padding:0;box-sizing:border-box;font-family:Segoe UI;}
 
-.key-card{background:#225522;padding:12px;border-radius:12px;margin:10px;text-align:left;display:flex;justify-content:space-between;align-items:center;}
-.key-card div{flex:1;}
-.key-card p{margin:4px 0;font-size:14px;}
-.key-card button{background:#ff5555;padding:6px 12px;font-size:13px;margin:2px;}
+body{
+background:#0f1e0f;
+color:white;
+display:flex;
+flex-direction:column;
+align-items:center;
+min-height:100vh;
+}
+
+header{
+width:100%;
+background:#1b3a1b;
+padding:15px;
+display:flex;
+justify-content:space-between;
+align-items:center;
+}
+
+.card{
+background:#1f3a1f;
+padding:25px;
+border-radius:20px;
+margin:15px;
+width:95%;
+max-width:700px;
+text-align:center;
+transition:0.3s;
+animation:fadeUp 0.6s;
+}
+
+.card:hover{
+box-shadow:0 0 25px #3fc03f;
+}
+
+button{
+background:#3fc03f;
+border:none;
+padding:12px 25px;
+border-radius:12px;
+color:white;
+cursor:pointer;
+margin-top:10px;
+}
+
+input{
+width:90%;
+padding:12px;
+margin:10px;
+border-radius:10px;
+border:none;
+background:#225522;
+color:white;
+}
+
+table{
+width:100%;
+margin-top:15px;
+border-collapse:collapse;
+}
+
+th,td{
+padding:12px;
+border-bottom:1px solid #2c5c2c;
+font-size:14px;
+}
+
+.badge{
+padding:4px 10px;
+border-radius:8px;
+font-size:12px;
+}
+
+.badge-ok{background:#a855f7;}
+.badge-off{background:#ff4444;}
+
+@keyframes fadeUp{
+from{opacity:0;transform:translateY(20px)}
+to{opacity:1;transform:translateY(0)}
+}
 </style>
 </head>
 
 <body>
 
 <header>
-<div>Ferrao Generator</div>
+<h3>Ferrao Generator</h3>
 <div>
 <span id="userHeader"></span>
-<button id="btnLogout" style="display:none;" onclick="logout()">Sair</button>
-<span class="menu" onclick="toggleMenu()">☰</span>
+<button id="logoutBtn" style="display:none;" onclick="logout()">Sair</button>
 </div>
 </header>
-
-<div id="dropdown" class="dropdown">
-<a onclick="showHome()">Home</a>
-<a onclick="showLogin()">Entrar</a>
-<a onclick="showRegister()">Cadastrar</a>
-</div>
 
 <div id="main"></div>
 
 <script>
+
 const USERS_API="https://gerador-online-9fqv.vercel.app/dados";
 const KEYS_API="https://teste-api-mcok.vercel.app/keys";
 
 let currentUser=null;
-let keyInterval=null;
-
-function toggleMenu(){
-const d=document.getElementById("dropdown");
-d.style.display=d.style.display==="flex"?"none":"flex";
-}
+let refreshInterval=null;
 
 function showHome(){
 document.getElementById("main").innerHTML=`
 <div class="card">
-<h2>Bem vindo ao Ferrao Generator</h2>
-<button onclick="window.open('https://discord.gg/ferraocheats')">Adquirir Plano</button>
+<h2>Bem vindo</h2>
+<button onclick="showLogin()">Entrar</button>
+<button onclick="showRegister()">Cadastrar</button>
 </div>`;
 }
 
 function showLogin(){
 document.getElementById("main").innerHTML=`
 <div class="card">
-<h2>Entrar</h2>
+<h2>Login</h2>
 <input id="loginUser" placeholder="Usuário">
 <input id="loginPass" type="password" placeholder="Senha">
 <button onclick="login()">Entrar</button>
-<p id="loginStatus"></p>
 </div>`;
 }
 
 async function login(){
-let u=document.getElementById("loginUser").value.trim();
-let p=document.getElementById("loginPass").value.trim();
+const u=document.getElementById("loginUser").value;
+const p=document.getElementById("loginPass").value;
 
 const res=await fetch(USERS_API);
 const users=await res.json();
@@ -85,18 +139,19 @@ const users=await res.json();
 const user=users.find(x=>x.username===u && x.password===p);
 
 if(!user){
-document.getElementById("loginStatus").innerText="Login inválido";
+alert("Login inválido");
 return;
 }
 
 currentUser=user;
-document.getElementById("btnLogout").style.display="inline-block";
-document.getElementById("userHeader").innerText=u;
+
+document.getElementById("logoutBtn").style.display="inline";
+document.getElementById("userHeader").innerText=user.username;
 
 if(user.admin){
 showAdmin();
 }else{
-showUser();
+showDashboard();
 }
 }
 
@@ -106,42 +161,39 @@ document.getElementById("main").innerHTML=`
 <h2>Cadastrar</h2>
 <input id="regUser" placeholder="Usuário">
 <input id="regPass" type="password" placeholder="Senha">
-<button onclick="register()">Cadastrar</button>
+<button onclick="register()">Criar</button>
 </div>`;
 }
 
 async function register(){
-let u=document.getElementById("regUser").value.trim();
-let p=document.getElementById("regPass").value.trim();
-
 await fetch(USERS_API,{
 method:"POST",
 headers:{'Content-Type':'application/json'},
 body:JSON.stringify({
-username:u,
-password:p,
+username:regUser.value,
+password:regPass.value,
 plan:null,
 planLimit:0,
 keysGenerated:0
 })
 });
-
 alert("Conta criada");
 showLogin();
 }
 
-function showUser(){
+function showDashboard(){
 
 if(!currentUser.plan){
 document.getElementById("main").innerHTML=`
 <div class="card">
-<h2>Você não possui plano</h2>
+<h2>Sem plano ativo</h2>
 <button onclick="window.open('https://discord.gg/ferraocheats')">Comprar Plano</button>
 </div>`;
 return;
 }
 
 document.getElementById("main").innerHTML=`
+
 <div class="card">
 <h2>Dashboard</h2>
 <p>Plano: ${currentUser.plan}</p>
@@ -149,13 +201,26 @@ document.getElementById("main").innerHTML=`
 <button onclick="generateKey()">Gerar Key</button>
 </div>
 
-<div id="keysList"></div>
+<div class="card">
+<h3>Minhas Chaves</h3>
+<table>
+<thead>
+<tr>
+<th>Chave</th>
+<th>Tipo</th>
+<th>Status</th>
+<th>Ações</th>
+</tr>
+</thead>
+<tbody id="keysTable"></tbody>
+</table>
+</div>
 `;
 
 loadKeys();
 
-if(keyInterval) clearInterval(keyInterval);
-keyInterval=setInterval(loadKeys,3000);
+if(refreshInterval) clearInterval(refreshInterval);
+refreshInterval=setInterval(loadKeys,2000);
 }
 
 async function generateKey(){
@@ -165,7 +230,7 @@ alert("Limite atingido");
 return;
 }
 
-let tipo=prompt("Tipo (hour/day/month/year)");
+let tipo=prompt("Tipo da key");
 if(!tipo) return;
 
 let key="FERRAO-CHEATS-"+Math.random().toString(36).substring(2,10).toUpperCase();
@@ -182,39 +247,42 @@ active:true
 });
 
 currentUser.keysGenerated++;
-document.getElementById("keysCount").innerText=currentUser.keysGenerated;
+keysCount.innerText=currentUser.keysGenerated;
 
 loadKeys();
 }
 
 async function loadKeys(){
+
 const res=await fetch(KEYS_API);
 const keys=await res.json();
 
 const my=keys.filter(k=>k.username===currentUser.username);
 
-const div=document.getElementById("keysList");
-if(!div) return;
+const table=document.getElementById("keysTable");
+if(!table) return;
 
-div.innerHTML="";
+table.innerHTML="";
 
 my.forEach(k=>{
-div.innerHTML+=`
-<div class="key-card">
-<div>
-<p><b>${k.key}</b></p>
-<p>Tipo: ${k.type}</p>
-<p>Status: ${k.active?"Ativa":"Revogada"}</p>
-</div>
-<div>
-<button onclick="revoke('${k.key}')">Revogar</button>
+table.innerHTML+=`
+<tr>
+<td>${k.key}</td>
+<td>${k.type}</td>
+<td>
+<span class="badge ${k.active?'badge-ok':'badge-off'}">
+${k.active?'Disponível':'Revogada'}
+</span>
+</td>
+<td>
+<button onclick="revokeKey('${k.key}')">Revogar</button>
 <button onclick="deleteKey('${k.key}')">Excluir</button>
-</div>
-</div>`;
+</td>
+</tr>`;
 });
 }
 
-async function revoke(key){
+async function revokeKey(key){
 await fetch(KEYS_API+"/"+key,{
 method:"PUT",
 headers:{'Content-Type':'application/json'},
@@ -226,7 +294,7 @@ loadKeys();
 async function deleteKey(key){
 await fetch(KEYS_API+"/"+key,{method:"DELETE"});
 currentUser.keysGenerated--;
-document.getElementById("keysCount").innerText=currentUser.keysGenerated;
+keysCount.innerText=currentUser.keysGenerated;
 loadKeys();
 }
 
@@ -260,16 +328,16 @@ div.innerHTML+=`
 }
 
 async function setPlan(user){
-let plan=prompt("Plano:");
+let plan=prompt("Plano");
 let limit=parseInt(prompt("Limite keys"));
 let days=parseInt(prompt("Dias"));
 
-let planEnd=new Date(Date.now()+days*86400000).toISOString();
+let end=new Date(Date.now()+days*86400000).toISOString();
 
 await fetch(USERS_API+"/"+user,{
 method:"PUT",
 headers:{'Content-Type':'application/json'},
-body:JSON.stringify({plan,planLimit:limit,planEnd})
+body:JSON.stringify({plan,planLimit:limit,planEnd:end})
 });
 
 loadUsers();
@@ -286,13 +354,13 @@ loadUsers();
 
 function logout(){
 currentUser=null;
-document.getElementById("btnLogout").style.display="none";
-document.getElementById("userHeader").innerText="";
+logoutBtn.style.display="none";
+userHeader.innerText="";
 showHome();
 }
 
 showHome();
-</script>
 
+</script>
 </body>
 </html>
