@@ -13,6 +13,7 @@ font-family:Arial;
 margin:0;
 }
 
+/* HEADER */
 header{
 background:#0c3b17;
 padding:15px;
@@ -21,16 +22,19 @@ justify-content:space-between;
 align-items:center;
 }
 
+/* BOTÕES */
 .btn{
 background:#2ecc71;
 border:none;
-padding:12px 25px;
+padding:10px 20px;
 border-radius:12px;
 color:white;
 font-weight:bold;
 cursor:pointer;
+margin:3px;
 }
 
+/* DASHBOARD */
 .dashboard{
 margin:20px;
 background:#0d2f17;
@@ -40,6 +44,7 @@ text-align:center;
 box-shadow:0 0 25px #2ecc71;
 }
 
+/* LISTA DE KEYS */
 .keyTable{
 margin:20px;
 background:#0b2413;
@@ -57,12 +62,13 @@ animation:fade 0.5s ease;
 
 .status{
 background:purple;
-padding:5px 15px;
-border-radius:15px;
+padding:4px 12px;
+border-radius:12px;
+font-size:13px;
 }
 
 @keyframes fade{
-from{opacity:0; transform:translateY(15px);}
+from{opacity:0; transform:translateY(10px);}
 to{opacity:1; transform:translateY(0);}
 }
 </style>
@@ -78,7 +84,6 @@ to{opacity:1; transform:translateY(0);}
 
 <div class="dashboard">
 <h2>Dashboard</h2>
-
 <div id="planInfo"></div>
 <br>
 <button class="btn" onclick="gerarKey()">Gerar Key</button>
@@ -94,20 +99,27 @@ to{opacity:1; transform:translateY(0);}
 const USER_API="https://gerador-online-9fqv.vercel.app/dados";
 const KEY_API="https://teste-api-mcok.vercel.app/keys";
 
-let user = JSON.parse(localStorage.getItem("user"));
+/* ===== LOGIN CHECK SEM LOOP ===== */
+
+let user = localStorage.getItem("user");
 
 if(!user){
-alert("Faça login primeiro");
-location.reload();
+document.body.innerHTML="<h2 style='text-align:center;margin-top:50px'>Faça login primeiro</h2>";
+throw new Error("Sem login");
 }
+
+user = JSON.parse(user);
 
 document.getElementById("userInfo").innerText =
 user.username+" ("+(user.plan||"sem plano")+")";
 
+/* ===== TEMPO RESTANTE ===== */
+
 function tempoRestante(data){
 if(!data) return "Sem plano";
+
 let diff = new Date(data) - new Date();
-if(diff <=0) return "Expirado";
+if(diff<=0) return "Expirado";
 
 let d=Math.floor(diff/86400000);
 let h=Math.floor(diff%86400000/3600000);
@@ -117,7 +129,9 @@ let s=Math.floor(diff%60000/1000);
 return `${d}d ${h}h ${m}m ${s}s`;
 }
 
-async function atualizarDashboard(){
+/* ===== DASHBOARD ===== */
+
+function atualizarDashboard(){
 
 document.getElementById("planInfo").innerHTML=
 `
@@ -125,8 +139,9 @@ Plano: ${user.plan || "Nenhum"}<br>
 Expira em: ${tempoRestante(user.planEnd)}<br>
 Keys geradas: ${user.keysGenerated || 0}/${user.planLimit || 0}
 `;
-
 }
+
+/* ===== GERAR PREFIXO ===== */
 
 function gerarCodigo(){
 let chars="ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
@@ -137,10 +152,12 @@ code+=chars[Math.floor(Math.random()*chars.length)];
 return "FERRAO-CHEATS-"+code;
 }
 
+/* ===== GERAR KEY ===== */
+
 async function gerarKey(){
 
 if(!user.plan){
-alert("Adquira um plano");
+alert("Você não possui plano");
 return;
 }
 
@@ -165,7 +182,10 @@ headers:{"Content-Type":"application/json"},
 body:JSON.stringify(keyData)
 });
 
+/* atualiza contador */
+
 user.keysGenerated++;
+
 await fetch(USER_API+"/"+user.username,{
 method:"PUT",
 headers:{"Content-Type":"application/json"},
@@ -178,34 +198,55 @@ carregarKeys();
 atualizarDashboard();
 }
 
+/* ===== CARREGAR KEYS ===== */
+
 async function carregarKeys(){
 
-let res=await fetch(KEY_API);
-let keys=await res.json();
+try{
 
+let res = await fetch(KEY_API);
+let keys = await res.json();
+
+/* filtra apenas do usuário */
 let minhas = keys.filter(k=>k.owner===user.username);
 
 let container=document.getElementById("keysContainer");
 container.innerHTML="";
 
+/* render */
 minhas.reverse().forEach(k=>{
 
 container.innerHTML+=`
 <div class="keyCard">
+
 <b>${k.key}</b><br>
-Status: <span class="status">${k.revoked ? "REVOGADA":"ATIVA"}</span><br>
-Criada: ${new Date(k.createdAt).toLocaleString()}<br>
-Device: ${k.device || "Nenhum"}<br><br>
+
+Status:
+<span class="status">
+${k.revoked ? "REVOGADA":"ATIVA"}
+</span><br>
+
+Criada:
+${new Date(k.createdAt).toLocaleString()}<br>
+
+Device:
+${k.device || "Nenhum"}<br><br>
 
 <button class="btn" onclick="revogar('${k.key}')">Revogar</button>
 <button class="btn" onclick="resetar('${k.key}')">Resetar</button>
 <button class="btn" onclick="excluir('${k.key}')">Excluir</button>
+
 </div>
 `;
 
 });
 
+}catch(e){
+console.log("Erro ao carregar keys");
 }
+}
+
+/* ===== AÇÕES ===== */
 
 async function revogar(key){
 await fetch(KEY_API+"/"+key,{
@@ -230,10 +271,14 @@ await fetch(KEY_API+"/"+key,{method:"DELETE"});
 carregarKeys();
 }
 
+/* ===== LOGOUT ===== */
+
 function logout(){
 localStorage.removeItem("user");
 location.reload();
 }
+
+/* ===== AUTO REFRESH ===== */
 
 setInterval(()=>{
 carregarKeys();
