@@ -318,7 +318,7 @@ ${limitHtml}
 <option value="perm">Vitalícia</option>
 </select>
 
-<button onclick="generate()" ${remaining<=0?"disabled":""}>Gerar</button>
+<button onclick="generate()">Gerar</button>
 
 <pre id="genOut">---</pre>
 
@@ -326,7 +326,7 @@ ${limitHtml}
 
 <div class="card">
 <h2>Minhas Keys</h2>
-<button onclick="reloadUserData()">🔄 Atualizar</button>
+<button onclick="loadUserKeys()">🔄 Atualizar Lista</button>
 <div id="userKeys"></div>
 </div>
 
@@ -498,21 +498,25 @@ if(qtyRequested>remaining){
 return alert(`Você só pode gerar mais ${remaining} keys!`);
 }
 
-if(qtyRequested<=0){
+if(qtyRequested<=0 || isNaN(qtyRequested)){
 return alert("Quantidade inválida!");
 }
 
-genOut.textContent="Gerando...\n";
+genOut.textContent="Gerando keys...\n\n";
+
+const generatedKeys=[];
+
+try{
 
 for(let i=0;i<qtyRequested;i++){
 
-const key=prefix.value+rand(8);
+const keyValue=prefix.value+rand(8);
 
-await fetch(KEYS_API,{
+const response=await fetch(KEYS_API,{
 method:"POST",
 headers:{"Content-Type":"application/json"},
 body:JSON.stringify({
-key:key,
+key:keyValue,
 type:type.value,
 username:currentUser.username,
 used:false,
@@ -521,12 +525,29 @@ createdAt:Date.now()
 })
 });
 
-genOut.textContent+=key+"\n";
+if(!response.ok){
+console.error("Erro ao salvar key:", await response.text());
+genOut.textContent+=`❌ Erro ao gerar key ${i+1}\n`;
+continue;
 }
 
-genOut.textContent+="\n✅ Keys geradas com sucesso!";
+generatedKeys.push(keyValue);
+genOut.textContent+=`✅ ${keyValue}\n`;
+}
 
-await showDashboard();
+genOut.textContent+=`\n🎉 ${generatedKeys.length} key(s) gerada(s) com sucesso!\n`;
+genOut.textContent+=`📋 Keys salvas na API e na lista abaixo.\n`;
+
+// Aguardar um pouco para API processar
+await new Promise(resolve=>setTimeout(resolve,1000));
+
+// Atualizar lista
+await loadUserKeys();
+
+}catch(error){
+console.error("Erro ao gerar keys:", error);
+genOut.textContent+=`\n❌ Erro: ${error.message}`;
+}
 }
 
 function renderKeyItem(k,isAdmin=false){
@@ -559,18 +580,35 @@ Status: ${isExpired?"<span class='expired'>EXPIRADA</span>":timeDisplay}
 
 async function loadUserKeys(){
 
+try{
 const res=await fetch(KEYS_API);
 const data=await res.json();
 
-userKeys.innerHTML="";
+const userKeysDiv=document.getElementById("userKeys");
+if(!userKeysDiv) return;
 
-data
-.filter(k=>k.username===currentUser.username)
-.forEach(k=>{
-userKeys.innerHTML+=renderKeyItem(k,false);
+userKeysDiv.innerHTML="";
+
+const myKeys=data.filter(k=>k.username===currentUser.username);
+
+if(myKeys.length===0){
+userKeysDiv.innerHTML="<p style='color:#999;'>Nenhuma key gerada ainda.</p>";
+return;
+}
+
+myKeys.forEach(k=>{
+userKeysDiv.innerHTML+=renderKeyItem(k,false);
 });
 
 startTimers();
+
+}catch(error){
+console.error("Erro ao carregar keys:", error);
+const userKeysDiv=document.getElementById("userKeys");
+if(userKeysDiv){
+userKeysDiv.innerHTML="<p style='color:#c03f3f;'>❌ Erro ao carregar keys</p>";
+}
+}
 }
 
 function calculateTimeRemaining(key){
@@ -645,7 +683,7 @@ clearInterval(timers[key.key]);
 },1000);
 
 });
-});
+}).catch(err=>console.error("Erro ao iniciar timers:", err));
 }
 
 async function revokeKey(key,isAdmin){
