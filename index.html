@@ -129,12 +129,19 @@ async function register(){
   if(!u || !p){ status.innerText="Preencha os campos!"; return; }
 
   try{
-    const res = await fetch(USERS_API);
-    if(!res.ok) throw new Error("Erro HTTP: "+res.status);
-    const users = await res.json();
-    if(users.find(x=>x.username===u)){ status.innerText="Usuário já existe!"; return; }
+    const res = await fetch(USERS_API, {
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({ username:u, password:p, avatar })
+    });
 
-    alert("Cadastro feito! (sua API precisa aceitar POST para salvar de verdade)");
+    if(!res.ok){
+      const err = await res.json();
+      status.innerText = err.error || "Erro ao criar usuário";
+      return;
+    }
+
+    alert("Cadastro realizado com sucesso!");
     showLogin();
 
   }catch(e){ status.innerText="Erro ao conectar API"; console.error(e); }
@@ -179,6 +186,8 @@ async function adminLoadUsers(){
         <p>${u.username} — ${u.plan||'Nenhum'}</p>
         <p>Keys: ${u.keysGenerated||0}/${u.planLimit||0}</p>
         <button onclick="promptAssignPlan('${u.username}')">Atribuir Plano</button>
+        <button onclick="promptRevokePlan('${u.username}')">Revogar Plano</button>
+        <button onclick="promptResetDevice('${u.username}')">Resetar Device</button>
       </div>`;
     });
   }catch(e){ alert("Erro ao carregar usuários"); console.error(e);}
@@ -191,9 +200,41 @@ async function promptAssignPlan(username){
   const days = parseInt(prompt("Duração em dias:"));
   const planEnd = new Date(Date.now()+days*86400000).toISOString();
 
-  alert("Função de salvar plano precisa que a API aceite POST ou PUT para atualizar usuários");
+  try{
+    await fetch(`${USERS_API}/${username}`, {
+      method:"PUT",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({ plan, planLimit:limit, planEnd })
+    });
+    alert("Plano atribuído!");
+    adminLoadUsers();
+  }catch(e){ alert("Erro ao atualizar plano"); console.error(e);}
+}
 
-  adminLoadUsers();
+// Revogar plano
+async function promptRevokePlan(username){
+  try{
+    await fetch(`${USERS_API}/${username}`, {
+      method:"PUT",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({ plan:null, planLimit:0, planEnd:null })
+    });
+    alert("Plano revogado!");
+    adminLoadUsers();
+  }catch(e){ alert("Erro ao revogar plano"); console.error(e);}
+}
+
+// Resetar device
+async function promptResetDevice(username){
+  try{
+    await fetch(`${USERS_API}/${username}`, {
+      method:"PUT",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({ device:null })
+    });
+    alert("Device resetado!");
+    adminLoadUsers();
+  }catch(e){ alert("Erro ao resetar device"); console.error(e);}
 }
 
 // Gerar key
@@ -221,6 +262,5 @@ function logout(){
 // Inicializa
 showHome();
 </script>
-
 </body>
 </html>
