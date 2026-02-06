@@ -5,30 +5,17 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Ferrao Generator</title>
 <style>
-* { margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI', Tahoma, sans-serif; }
-body { background:#0f1e0f; color:#fff; display:flex; flex-direction:column; align-items:center; min-height:100vh; transition:0.3s; overflow-x:hidden;}
-header { width:100%; background:#1b3a1b; padding:15px 20px; display:flex; justify-content:space-between; align-items:center; border-radius:0 0 12px 12px; box-shadow:0 2px 10px rgba(0,0,0,0.5);}
-.menu { font-size:28px; cursor:pointer; user-select:none; }
-.dropdown { display:none; flex-direction:column; background:#225522; width:100%; text-align:center; border-radius:0 0 12px 12px; }
-.dropdown a { padding:12px; text-decoration:none; color:#fff; border-bottom:1px solid #144214; transition:0.2s; }
-.dropdown a:hover { background:#144214; }
-h1,h2,h3,h4,h5,h6 { margin:15px 0; text-align:center; }
-.card { background:#1f3a1f; padding:20px; border-radius:20px; margin:20px 0; width:90%; max-width:500px; box-shadow:0 4px 20px rgba(0,0,0,0.7); text-align:center; transition:0.6s; opacity:0; transform:translateY(50px);}
-.card.show{opacity:1; transform:translateY(0);}
-button { background:#3fc03f; color:#fff; border:none; padding:12px 25px; margin:10px 5px; border-radius:12px; cursor:pointer; font-weight:bold; transition:0.3s; }
-button:hover { background:#32a532; }
-input, select { width:90%; padding:12px; margin:8px 0; border-radius:12px; border:none; background:#225522; color:#fff; }
-input::placeholder { color:#aaa; }
-.avatar { width:60px; height:60px; border-radius:50%; object-fit:cover; margin:0 10px; cursor:pointer; border:2px solid #3fc03f; }
-.user-info { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; }
-#keys div, #users div { background:#2a5a2a; margin:5px 0; padding:10px; border-radius:15px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; }
-#keys div button, #users div button { background:#ff4444; padding:5px 10px; font-size:12px; margin:3px; border-radius:6px; cursor:pointer; }
-#users div button.plan { background:#3f9fff; }
-#keys div span, #users div span { margin:3px; }
-.logout { background:#ff4444; padding:8px 16px; border-radius:12px; cursor:pointer; float:right; margin-right:10px; display:none; }
-a.button { text-decoration:none; display:inline-block; background:#3fc03f; padding:12px 25px; border-radius:12px; color:#fff; margin-top:10px; transition:0.3s; }
-a.button:hover { background:#32a532; }
-@media(max-width:600px){ h1,h2,h3{ font-size:22px;} button,input,select{ width:95%; font-size:16px; } .user-info{flex-direction:column;align-items:flex-start;}}
+* {margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI', Tahoma, sans-serif;}
+body { background:#0f1e0f; color:#fff; display:flex; flex-direction:column; align-items:center; min-height:100vh;}
+header { width:100%; background:#1b3a1b; padding:15px; display:flex; justify-content:space-between; align-items:center; position:relative;}
+.menu { font-size:28px; cursor:pointer;}
+.dropdown { display:none; flex-direction:column; background:#225522; width:100%; position:absolute; top:60px; left:0; z-index:999;}
+.dropdown a { padding:10px; color:#fff; text-decoration:none;}
+.card { background:#1f3a1f; padding:20px; border-radius:15px; margin:15px; width:90%; max-width:500px; text-align:center; transition: all 0.3s; }
+.card:hover { transform: translateY(-5px); box-shadow: 0 0 20px #3fc03f;}
+button{background:#3fc03f;color:#fff;border:none;padding:10px 20px;border-radius:10px;cursor:pointer;margin:5px;}
+input{ width:90%; padding:10px; margin:6px 0; border-radius:8px; border:none; background:#225522; color:#fff;}
+.avatar{width:60px;height:60px;border-radius:50%;object-fit:cover;border:2px solid #3fc03f; cursor:pointer;}
 </style>
 </head>
 <body>
@@ -37,8 +24,8 @@ a.button:hover { background:#32a532; }
   <div>Ferrao Generator</div>
   <div>
     <span id="userHeader"></span>
-    <span class="logout" onclick="logout()">Sair</span>
-    <div class="menu" onclick="toggleMenu()">☰</div>
+    <button id="btnLogout" style="display:none;" onclick="logout()">Sair</button>
+    <span class="menu" onclick="toggleMenu()">☰</span>
   </div>
 </header>
 
@@ -52,148 +39,195 @@ a.button:hover { background:#32a532; }
 
 <script>
 let currentUser = null;
-const discordLink = "https://discord.gg/seulink";
-const usersAPI = "https://ferrao-api.vercel.app/dados"; // coloque sua URL da API
-const keysAPI = "https://teste-api-mcok.vercel.app/keys";
 
-// Menu
-function toggleMenu(){ document.getElementById("dropdown").style.display = document.getElementById("dropdown").style.display==='flex'?'none':'flex'; }
-function scrollEffect(){ const cards=document.querySelectorAll(".card"); window.addEventListener("scroll",()=>{ const trigger=window.innerHeight*0.9; cards.forEach(card=>{ if(card.getBoundingClientRect().top<trigger) card.classList.add("show"); }); }); }
+// Sua API de usuários
+const USERS_API = "https://gerador-online-9fqv.vercel.app/dados";
+
+// Sua API de keys
+const KEYS_API = "https://teste-api-mcok.vercel.app/keys";
+
+// Toggle menu
+function toggleMenu(){
+  const d = document.getElementById("dropdown");
+  d.style.display = d.style.display==="flex"?"none":"flex";
+}
 
 // Home
 function showHome(){
   document.getElementById("main").innerHTML = `
-    <h1>Bem-vindo ao Ferrao Generator</h1>
-    <div class="card show"><h2>Funcionalidades</h2><p>Gerar keys, gerenciar plano, avatar, dashboard completo.</p></div>
-    <div class="card show"><h2>Segurança</h2><p>Controle de limite de keys, revogação e devices reset.</p></div>
-    <div class="card show"><h2>Planos</h2><p>Escolha seu plano e tenha acesso às funcionalidades.</p><a href="${discordLink}" target="_blank" class="button">Adquirir Plano</a></div>
-  `;
-  scrollEffect();
+    <div class="card">
+      <h2>Bem-vindo ao Ferrao Generator</h2>
+      <p>Cadastre-se ou faça login para começar a gerar keys.</p>
+      <button onclick="showRegister()">Cadastrar</button>
+      <button onclick="showLogin()">Entrar</button>
+    </div>`;
 }
 
-// Login/Register
-function showLogin(){ document.getElementById("main").innerHTML = `
-  <div class="card show">
-    <h2>Entrar</h2>
-    <input type="text" id="loginUser" placeholder="Usuário">
-    <input type="password" id="loginPass" placeholder="Senha">
-    <button onclick="login()">Entrar</button>
-  </div>
-`; }
-function showRegister(){ document.getElementById("main").innerHTML = `
-  <div class="card show">
-    <h2>Cadastrar</h2>
-    <div><img src="https://via.placeholder.com/60" class="avatar" id="regAvatar" onclick="uploadAvatar(this)"></div>
-    <input type="text" id="regUser" placeholder="Usuário">
-    <input type="password" id="regPass" placeholder="Senha">
-    <button onclick="register()">Cadastrar</button>
-  </div>
-`; }
+// Login
+function showLogin(){
+  document.getElementById("main").innerHTML = `
+    <div class="card">
+      <h2>Entrar</h2>
+      <input type="text" id="loginUser" placeholder="Usuário">
+      <input type="password" id="loginPass" placeholder="Senha">
+      <button onclick="login()">Entrar</button>
+    </div>`;
+}
 
-// Avatar
+async function login(){
+  const u = document.getElementById("loginUser").value.trim();
+  const p = document.getElementById("loginPass").value.trim();
+  if(!u || !p){ alert("Preencha os campos"); return; }
+
+  try{
+    const res = await fetch(USERS_API);
+    const users = await res.json();
+    const user = users.find(x=>x.username===u && x.password===p);
+    if(!user){ alert("Usuário ou senha inválidos"); return; }
+    currentUser = user;
+    showDashboard();
+  }catch(e){
+    alert("Erro ao conectar com a API de usuários");
+  }
+}
+
+// Register
+function showRegister(){
+  document.getElementById("main").innerHTML = `
+    <div class="card">
+      <h2>Cadastrar</h2>
+      <div><img src="https://via.placeholder.com/60" class="avatar" id="regAvatar" onclick="uploadAvatar(this)"></div>
+      <input type="text" id="regUser" placeholder="Usuário">
+      <input type="password" id="regPass" placeholder="Senha">
+      <button onclick="register()">Cadastrar</button>
+    </div>`;
+}
+
 function uploadAvatar(img){
   const file = document.createElement("input"); file.type="file"; file.accept="image/*";
-  file.onchange = e=>{ const reader = new FileReader(); reader.onload = ()=>{ img.src = reader.result; }; reader.readAsDataURL(e.target.files[0]); }
+  file.onchange = e => {
+    const reader = new FileReader();
+    reader.onload = ()=> img.src = reader.result;
+    reader.readAsDataURL(e.target.files[0]);
+  }
   file.click();
 }
 
-// Logout
-function logout(){ currentUser=null; document.querySelector(".logout").style.display="none"; document.getElementById("userHeader").textContent=""; showHome(); }
+async function register(){
+  const u = document.getElementById("regUser").value.trim();
+  const p = document.getElementById("regPass").value.trim();
+  const avatar = document.getElementById("regAvatar").src;
+  if(!u || !p){ alert("Preencha os campos!"); return; }
+
+  try{
+    const res = await fetch(USERS_API);
+    let users = await res.json();
+    if(users.find(x=>x.username===u)){ alert("Usuário já existe!"); return; }
+
+    const newUser = {
+      username:u,
+      password:p,
+      admin:false,
+      plan:null,
+      planLimit:0,
+      planEnd:null,
+      avatar,
+      keysGenerated:0
+    };
+    users.push(newUser);
+
+    // Enviar para API simulada
+    await fetch(USERS_API, { method:"POST", headers:{ "Content-Type":"application/json" }, body:JSON.stringify(newUser) });
+
+    alert("Cadastro realizado!");
+    showLogin();
+  }catch(e){ alert("Erro ao conectar com API"); }
+}
 
 // Dashboard
-async function showDashboard(){
-  document.querySelector(".logout").style.display="inline-block";
+function showDashboard(){
+  document.getElementById("btnLogout").style.display="inline-block";
   document.getElementById("userHeader").textContent = `${currentUser.username} (${currentUser.plan||'Sem plano'})`;
 
   if(currentUser.admin){
     document.getElementById("main").innerHTML = `
-      <h2>Painel Admin</h2>
-      <div class="card show">
-        <button onclick="adminCreateKey()">Criar Key Global</button>
+      <div class="card"><h2>Painel Admin</h2>
+        <button onclick="adminLoadUsers()">Carregar Usuários</button>
       </div>
-      <h3>Usuários Registrados</h3>
-      <div id="users"></div>
-      <h3>Gerenciar Keys</h3>
-      <div id="keys"></div>
-    `;
-    await listUsers();
-    await listAllKeys();
-  } else {
+      <div id="usersList"></div>`;
+  }else{
     document.getElementById("main").innerHTML = `
-      <h2>Dashboard</h2>
-      <div class="card user-info show">
-        <img src="${currentUser.avatar||'https://via.placeholder.com/60'}" class="avatar" onclick="changeAvatar()">
-        <div>
-          <p>Plano: ${currentUser.plan||'Sem plano'}</p>
-          <p>Keys geradas: ${currentUser.keysGenerated||0}/${currentUser.planLimit||0}</p>
-          <p id="timer"></p>
-          <button onclick="createKey()">Gerar Key</button>
-        </div>
+      <div class="card">
+        <h2>Dashboard</h2>
+        <img src="${currentUser.avatar}" class="avatar">
+        <p>Plano: ${currentUser.plan||'Sem plano'}</p>
+        <p>Keys geradas: ${currentUser.keysGenerated||0}/${currentUser.planLimit||0}</p>
+        <button onclick="showGenerateKey()">Gerar key</button>
       </div>
-      <h3>Suas Keys</h3>
-      <div id="keys"></div>
-    `;
-    listKeys();
-    if(currentUser.planEnd) startPlanTimer();
+      <div id="userKeys"></div>`;
   }
 }
 
-// Login
-async function login(){
-  const u=document.getElementById("loginUser").value;
-  const p=document.getElementById("loginPass").value;
-  try {
-      const res = await fetch(usersAPI).then(r=>r.json());
-      const user=res.users.find(x=>x.username===u && x.password===p);
-      if(!user){ alert("Login inválido"); return; }
-      currentUser=user;
-      showDashboard();
-  } catch(e){ console.error(e); alert("Erro ao conectar com a API!"); }
+// Admin - Listar usuários
+async function adminLoadUsers(){
+  try{
+    const res = await fetch(USERS_API);
+    const users = await res.json();
+    const div = document.getElementById("usersList");
+    div.innerHTML = "";
+    users.forEach(u=>{
+      div.innerHTML += `
+      <div class="card">
+        <img src="${u.avatar}" class="avatar">
+        <p>${u.username} — ${u.plan||'Nenhum'}</p>
+        <p>Keys: ${u.keysGenerated||0}/${u.planLimit||0}</p>
+        <button onclick="promptAssignPlan('${u.username}')">Atribuir Plano</button>
+      </div>`;
+    });
+  }catch(e){ alert("Erro ao carregar usuários"); }
 }
 
-// Register
-async function register(){
-    const u = document.getElementById("regUser").value.trim();
-    const p = document.getElementById("regPass").value.trim();
-    const avatar = document.getElementById("regAvatar").src;
-    if(!u || !p){ alert("Preencha usuário e senha!"); return; }
-    try {
-        const res = await fetch(usersAPI, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                username: u,
-                password: p,
-                avatar,
-                plan: null,
-                keysGenerated: 0,
-                planLimit: 0,
-                planEnd: null,
-                keys: [],
-                admin: false
-            })
-        });
-        if(!res.ok){ const err=await res.json(); alert(err.error || "Erro ao cadastrar usuário!"); return; }
-        alert("Cadastro realizado com sucesso!");
-        showLogin();
-    } catch(e){ console.error(e); alert("Erro ao conectar com a API!"); }
+// Planos
+async function promptAssignPlan(username){
+  const plan = prompt("Nome do plano:");
+  const limit = parseInt(prompt("Limite de keys:"));
+  const days = parseInt(prompt("Duração em dias:"));
+  const planEnd = new Date(Date.now()+days*86400000).toISOString();
+
+  try{
+    const res = await fetch(USERS_API);
+    let users = await res.json();
+    const user = users.find(x=>x.username===username);
+    user.plan=plan; user.planLimit=limit; user.planEnd=planEnd;
+
+    await fetch(USERS_API, { method:"POST", headers:{ "Content-Type":"application/json" }, body:JSON.stringify(user) });
+    alert("Plano atribuído!");
+    adminLoadUsers();
+  }catch(e){ alert("Erro ao atualizar plano"); }
 }
 
-// Avatar change
-function changeAvatar(){ uploadAvatar(document.querySelector(".avatar")); }
+// Gerar key
+function showGenerateKey(){
+  const tipo = prompt("Tipo de key (hour/day/month/year):");
+  if(!tipo) return;
 
-// Plan timer
-function startPlanTimer(){
-  const interval=setInterval(()=>{
-    if(!currentUser.planEnd) return;
-    const now=new Date(); const end=new Date(currentUser.planEnd); const diff=end-now;
-    if(diff<=0){ currentUser.plan=null; currentUser.planEnd=null; currentUser.planLimit=0; currentUser.keysGenerated=0; alert("Seu plano expirou!"); clearInterval(interval); showDashboard(); return; }
-    const days=Math.floor(diff/1000/60/60/24); const hours=Math.floor(diff/1000/60/60)%24; const mins=Math.floor(diff/1000/60)%60; const secs=Math.floor(diff/1000)%60;
-    const timerDiv=document.getElementById("timer"); if(timerDiv) timerDiv.textContent=`Tempo restante do plano: ${days}d ${hours}h ${mins}m ${secs}s`;
-  },1000);
+  const randomStr = Math.random().toString(36).substring(2,10).toUpperCase();
+  const newKey = `FERRAO-CHEATS-${randomStr}`;
+
+  fetch(KEYS_API, { method:"POST", headers:{ "Content-Type":"application/json" }, body:JSON.stringify({ key:newKey, type:tipo, username:currentUser.username, deviceUsed:false }) })
+    .then(()=>alert("Key gerada!"))
+    .catch(()=>alert("Erro ao gerar key"));
 }
 
-// Init
+// Logout
+function logout(){
+  currentUser=null;
+  document.getElementById("btnLogout").style.display="none";
+  document.getElementById("userHeader").textContent="";
+  showHome();
+}
+
+// Inicializa
 showHome();
 </script>
 
