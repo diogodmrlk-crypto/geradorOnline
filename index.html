@@ -17,15 +17,6 @@ align-items:center;
 min-height:100vh;
 }
 
-header{
-width:100%;
-background:#1b3a1b;
-padding:15px;
-display:flex;
-justify-content:space-between;
-align-items:center;
-}
-
 .card{
 background:#1f3a1f;
 padding:25px;
@@ -34,12 +25,6 @@ margin:15px;
 width:95%;
 max-width:700px;
 text-align:center;
-transition:0.3s;
-animation:fadeUp 0.6s;
-}
-
-.card:hover{
-box-shadow:0 0 25px #3fc03f;
 }
 
 button{
@@ -52,7 +37,7 @@ cursor:pointer;
 margin-top:10px;
 }
 
-input{
+select{
 width:90%;
 padding:12px;
 margin:10px;
@@ -71,36 +56,22 @@ border-collapse:collapse;
 th,td{
 padding:12px;
 border-bottom:1px solid #2c5c2c;
-font-size:14px;
 }
 
 .badge{
-padding:4px 10px;
+padding:5px 12px;
 border-radius:8px;
 font-size:12px;
 }
 
 .badge-ok{background:#a855f7;}
 .badge-off{background:#ff4444;}
-
-@keyframes fadeUp{
-from{opacity:0;transform:translateY(20px)}
-to{opacity:1;transform:translateY(0)}
-}
 </style>
 </head>
 
 <body>
 
-<header>
-<h3>Ferrao Generator</h3>
-<div>
-<span id="userHeader"></span>
-<button id="logoutBtn" style="display:none;" onclick="logout()">Sair</button>
-</div>
-</header>
-
-<div id="main"></div>
+<div id="app"></div>
 
 <script>
 
@@ -110,95 +81,54 @@ const KEYS_API="https://teste-api-mcok.vercel.app/keys";
 let currentUser=null;
 let refreshInterval=null;
 
-function showHome(){
-document.getElementById("main").innerHTML=`
-<div class="card">
-<h2>Bem vindo</h2>
-<button onclick="showLogin()">Entrar</button>
-<button onclick="showRegister()">Cadastrar</button>
-</div>`;
-}
-
-function showLogin(){
-document.getElementById("main").innerHTML=`
+function home(){
+app.innerHTML=`
 <div class="card">
 <h2>Login</h2>
-<input id="loginUser" placeholder="Usuário">
-<input id="loginPass" type="password" placeholder="Senha">
+<input id="user" placeholder="Usuário">
+<input id="pass" type="password" placeholder="Senha">
 <button onclick="login()">Entrar</button>
 </div>`;
 }
 
 async function login(){
-const u=document.getElementById("loginUser").value;
-const p=document.getElementById("loginPass").value;
 
 const res=await fetch(USERS_API);
 const users=await res.json();
 
-const user=users.find(x=>x.username===u && x.password===p);
+const u=user.value;
+const p=pass.value;
 
-if(!user){
-alert("Login inválido");
-return;
+const found=users.find(x=>x.username===u && x.password===p);
+
+if(!found) return alert("Login inválido");
+
+currentUser=found;
+dashboard();
 }
 
-currentUser=user;
-
-document.getElementById("logoutBtn").style.display="inline";
-document.getElementById("userHeader").innerText=user.username;
-
-if(user.admin){
-showAdmin();
-}else{
-showDashboard();
-}
-}
-
-function showRegister(){
-document.getElementById("main").innerHTML=`
-<div class="card">
-<h2>Cadastrar</h2>
-<input id="regUser" placeholder="Usuário">
-<input id="regPass" type="password" placeholder="Senha">
-<button onclick="register()">Criar</button>
-</div>`;
-}
-
-async function register(){
-await fetch(USERS_API,{
-method:"POST",
-headers:{'Content-Type':'application/json'},
-body:JSON.stringify({
-username:regUser.value,
-password:regPass.value,
-plan:null,
-planLimit:0,
-keysGenerated:0
-})
-});
-alert("Conta criada");
-showLogin();
-}
-
-function showDashboard(){
+function dashboard(){
 
 if(!currentUser.plan){
-document.getElementById("main").innerHTML=`
-<div class="card">
-<h2>Sem plano ativo</h2>
-<button onclick="window.open('https://discord.gg/ferraocheats')">Comprar Plano</button>
-</div>`;
+app.innerHTML=`<div class="card"><h2>Sem plano</h2></div>`;
 return;
 }
 
-document.getElementById("main").innerHTML=`
-
+app.innerHTML=`
 <div class="card">
-<h2>Dashboard</h2>
-<p>Plano: ${currentUser.plan}</p>
-<p>Keys: <span id="keysCount">${currentUser.keysGenerated}</span>/${currentUser.planLimit}</p>
-<button onclick="generateKey()">Gerar Key</button>
+<h2>Gerar Key</h2>
+
+<select id="tipo">
+<option value="1H">1 Hora</option>
+<option value="1D">1 Dia</option>
+<option value="7D">7 Dias</option>
+<option value="30D">30 Dias</option>
+<option value="LIFETIME">Lifetime</option>
+</select>
+
+<button onclick="generateKey()">Gerar</button>
+
+<p>Keys usadas: <span id="count">${currentUser.keysGenerated||0}</span> / ${currentUser.planLimit}</p>
 </div>
 
 <div class="card">
@@ -206,13 +136,13 @@ document.getElementById("main").innerHTML=`
 <table>
 <thead>
 <tr>
-<th>Chave</th>
+<th>Key</th>
 <th>Tipo</th>
 <th>Status</th>
 <th>Ações</th>
 </tr>
 </thead>
-<tbody id="keysTable"></tbody>
+<tbody id="keysList"></tbody>
 </table>
 </div>
 `;
@@ -220,34 +150,34 @@ document.getElementById("main").innerHTML=`
 loadKeys();
 
 if(refreshInterval) clearInterval(refreshInterval);
-refreshInterval=setInterval(loadKeys,2000);
+refreshInterval=setInterval(loadKeys,3000);
 }
 
 async function generateKey(){
 
-if(currentUser.keysGenerated>=currentUser.planLimit){
+if((currentUser.keysGenerated||0)>=currentUser.planLimit){
 alert("Limite atingido");
 return;
 }
 
-let tipo=prompt("Tipo da key");
-if(!tipo) return;
+const tipo=document.getElementById("tipo").value;
 
-let key="FERRAO-CHEATS-"+Math.random().toString(36).substring(2,10).toUpperCase();
+const key="FERRAO-CHEATS-"+Math.random().toString(36).substring(2,10).toUpperCase();
 
 await fetch(KEYS_API,{
 method:"POST",
 headers:{'Content-Type':'application/json'},
 body:JSON.stringify({
-key,
+key:key,
 type:tipo,
 username:currentUser.username,
-active:true
+active:true,
+created:new Date().toISOString()
 })
 });
 
-currentUser.keysGenerated++;
-keysCount.innerText=currentUser.keysGenerated;
+currentUser.keysGenerated=(currentUser.keysGenerated||0)+1;
+count.innerText=currentUser.keysGenerated;
 
 loadKeys();
 }
@@ -257,15 +187,12 @@ async function loadKeys(){
 const res=await fetch(KEYS_API);
 const keys=await res.json();
 
-const my=keys.filter(k=>k.username===currentUser.username);
+const myKeys=keys.filter(k=>k.username===currentUser.username);
 
-const table=document.getElementById("keysTable");
-if(!table) return;
+keysList.innerHTML="";
 
-table.innerHTML="";
-
-my.forEach(k=>{
-table.innerHTML+=`
+myKeys.forEach(k=>{
+keysList.innerHTML+=`
 <tr>
 <td>${k.key}</td>
 <td>${k.type}</td>
@@ -275,14 +202,14 @@ ${k.active?'Disponível':'Revogada'}
 </span>
 </td>
 <td>
-<button onclick="revokeKey('${k.key}')">Revogar</button>
-<button onclick="deleteKey('${k.key}')">Excluir</button>
+<button onclick="revoke('${k.key}')">Revogar</button>
+<button onclick="del('${k.key}')">Excluir</button>
 </td>
 </tr>`;
 });
 }
 
-async function revokeKey(key){
+async function revoke(key){
 await fetch(KEYS_API+"/"+key,{
 method:"PUT",
 headers:{'Content-Type':'application/json'},
@@ -291,75 +218,14 @@ body:JSON.stringify({active:false})
 loadKeys();
 }
 
-async function deleteKey(key){
+async function del(key){
 await fetch(KEYS_API+"/"+key,{method:"DELETE"});
 currentUser.keysGenerated--;
-keysCount.innerText=currentUser.keysGenerated;
+count.innerText=currentUser.keysGenerated;
 loadKeys();
 }
 
-async function showAdmin(){
-
-document.getElementById("main").innerHTML=`
-<div class="card">
-<h2>Painel Admin</h2>
-<div id="usersList"></div>
-</div>`;
-
-loadUsers();
-}
-
-async function loadUsers(){
-const res=await fetch(USERS_API);
-const users=await res.json();
-
-const div=document.getElementById("usersList");
-div.innerHTML="";
-
-users.forEach(u=>{
-div.innerHTML+=`
-<div class="card">
-<p>${u.username}</p>
-<p>Plano: ${u.plan||"Nenhum"}</p>
-<button onclick="setPlan('${u.username}')">Definir Plano</button>
-<button onclick="removePlan('${u.username}')">Remover Plano</button>
-</div>`;
-});
-}
-
-async function setPlan(user){
-let plan=prompt("Plano");
-let limit=parseInt(prompt("Limite keys"));
-let days=parseInt(prompt("Dias"));
-
-let end=new Date(Date.now()+days*86400000).toISOString();
-
-await fetch(USERS_API+"/"+user,{
-method:"PUT",
-headers:{'Content-Type':'application/json'},
-body:JSON.stringify({plan,planLimit:limit,planEnd:end})
-});
-
-loadUsers();
-}
-
-async function removePlan(user){
-await fetch(USERS_API+"/"+user,{
-method:"PUT",
-headers:{'Content-Type':'application/json'},
-body:JSON.stringify({plan:null,planLimit:0})
-});
-loadUsers();
-}
-
-function logout(){
-currentUser=null;
-logoutBtn.style.display="none";
-userHeader.innerText="";
-showHome();
-}
-
-showHome();
+home();
 
 </script>
 </body>
