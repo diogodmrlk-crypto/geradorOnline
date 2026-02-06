@@ -197,6 +197,8 @@ async function login(){
 const u=loginUser.value;
 const p=loginPass.value;
 
+if(!u || !p) return alert("Preencha usuário e senha");
+
 const res=await fetch(USERS_API);
 const users=await res.json();
 
@@ -210,6 +212,19 @@ btnLogout.style.display="inline-block";
 userHeader.innerText=user.username;
 
 showDashboard();
+}
+
+async function reloadUserData(){
+if(!currentUser) return;
+
+const res=await fetch(USERS_API);
+const users=await res.json();
+const user=users.find(x=>x.username===currentUser.username);
+
+if(user){
+currentUser=user;
+showDashboard();
+}
 }
 
 function showRegister(){
@@ -246,6 +261,21 @@ await showAdminPanel();
 return;
 }
 
+// Verificar plano
+console.log("Usuário atual:", currentUser);
+console.log("Plano do usuário:", currentUser.plan);
+
+if(!currentUser.plan || currentUser.plan === null || currentUser.plan === "null"){
+main.innerHTML=`
+<div class="card">
+<h2>⚠️ Sem Plano Ativo</h2>
+<p>Você não possui um plano ativo.</p>
+<p>Entre em contato com o administrador para ativar seu plano.</p>
+<button onclick="reloadUserData()">🔄 Recarregar Dados</button>
+</div>`;
+return;
+}
+
 // USER BASICO GERADOR
 const keysRes=await fetch(KEYS_API);
 const allKeys=await keysRes.json();
@@ -260,7 +290,7 @@ limitHtml=`<div class="limit-error">❌ LIMITE ATINGIDO (${userKeysCount}/${limi
 }else if(remaining<=50){
 limitHtml=`<div class="limit-warning">⚠️ Você tem ${remaining} keys restantes de ${limit}</div>`;
 }else{
-limitHtml=`<div style="color:#3fc03f;margin:10px 0;">✅ Keys: ${userKeysCount}/${limit}</div>`;
+limitHtml=`<div style="color:#3fc03f;margin:10px 0;">✅ Keys: ${userKeysCount}/${limit} | Plano: ${currentUser.plan.toUpperCase()}</div>`;
 }
 
 main.innerHTML=`
@@ -275,7 +305,7 @@ ${limitHtml}
 <input id="prefix" value="FERRAO-CHEATS-">
 
 <label>Quantidade</label>
-<input id="qty" type="number" value="1" max="${remaining}">
+<input id="qty" type="number" value="1" max="${remaining}" min="1">
 
 <label>Tipo</label>
 <select id="type">
@@ -296,6 +326,7 @@ ${limitHtml}
 
 <div class="card">
 <h2>Minhas Keys</h2>
+<button onclick="reloadUserData()">🔄 Atualizar</button>
 <div id="userKeys"></div>
 </div>
 
@@ -380,7 +411,9 @@ const user=users.find(u=>u.username===username);
 
 if(!user) return alert("Usuário não encontrado");
 
-await fetch(USERS_API+"/"+user.id,{
+const userId=user.id||user._id||username;
+
+await fetch(USERS_API+"/"+userId,{
 method:"PUT",
 headers:{"Content-Type":"application/json"},
 body:JSON.stringify({...user,plan:newPlan})
@@ -444,7 +477,9 @@ return s;
 
 async function generate(){
 
-if(!currentUser.plan) return alert("Você não possui plano");
+if(!currentUser.plan || currentUser.plan === null || currentUser.plan === "null"){
+return alert("Você não possui plano ativo! Entre em contato com o administrador.");
+}
 
 const keysRes=await fetch(KEYS_API);
 const allKeys=await keysRes.json();
@@ -461,6 +496,10 @@ const remaining=limit-userKeysCount;
 
 if(qtyRequested>remaining){
 return alert(`Você só pode gerar mais ${remaining} keys!`);
+}
+
+if(qtyRequested<=0){
+return alert("Quantidade inválida!");
 }
 
 genOut.textContent="Gerando...\n";
@@ -484,6 +523,8 @@ createdAt:Date.now()
 
 genOut.textContent+=key+"\n";
 }
+
+genOut.textContent+="\n✅ Keys geradas com sucesso!";
 
 await showDashboard();
 }
