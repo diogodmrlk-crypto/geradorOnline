@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -5,22 +6,23 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Ferrao Generator</title>
 <style>
-* {margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI', Tahoma, sans-serif;}
-body { background:#0f1e0f; color:#fff; display:flex; flex-direction:column; align-items:center; min-height:100vh;}
-header { width:100%; background:#1b3a1b; padding:15px; display:flex; justify-content:space-between; align-items:center; position:relative;}
-.menu { font-size:28px; cursor:pointer;}
-.dropdown { display:none; flex-direction:column; background:#225522; width:100%; position:absolute; top:60px; left:0; z-index:999;}
-.dropdown a { padding:10px; color:#fff; text-decoration:none;}
-.card { background:#1f3a1f; padding:20px; border-radius:15px; margin:15px; width:90%; max-width:500px; text-align:center; transition: all 0.3s; }
-.card:hover { transform: translateY(-5px); box-shadow: 0 0 20px #3fc03f;}
+*{margin:0;padding:0;box-sizing:border-box;font-family:'Segoe UI',Tahoma,sans-serif;}
+body{background:#0f1e0f;color:#fff;display:flex;flex-direction:column;align-items:center;min-height:100vh;}
+header{width:100%;background:#1b3a1b;padding:15px;display:flex;justify-content:space-between;align-items:center;position:relative;}
+.menu{font-size:28px;cursor:pointer;}
+.dropdown{display:none;flex-direction:column;background:#225522;width:100%;position:absolute;top:60px;left:0;z-index:999;}
+.dropdown a{padding:10px;color:#fff;text-decoration:none;}
+.card{background:#1f3a1f;padding:20px;border-radius:15px;margin:15px;width:90%;max-width:500px;text-align:center;transition: all 0.3s;}
+.card:hover{transform: translateY(-5px);box-shadow:0 0 20px #3fc03f;}
 button{background:#3fc03f;color:#fff;border:none;padding:10px 20px;border-radius:10px;cursor:pointer;margin:5px;}
-input{ width:90%; padding:10px; margin:6px 0; border-radius:8px; border:none; background:#225522; color:#fff;}
-.avatar{width:60px;height:60px;border-radius:50%;object-fit:cover;border:2px solid #3fc03f; cursor:pointer;}
+input{width:90%;padding:10px;margin:6px 0;border-radius:8px;border:none;background:#225522;color:#fff;}
+.avatar{width:60px;height:60px;border-radius:50%;object-fit:cover;border:2px solid #3fc03f;cursor:pointer;}
 .cards-container{display:flex; flex-wrap:wrap; justify-content:center; margin-top:20px;}
-.cards-container .card{flex:1 1 250px; margin:10px;}
-.key-card{background:#225522; padding:10px; border-radius:10px; margin:8px; text-align:left; display:flex; justify-content:space-between; align-items:center;}
+.cards-container .card{flex:1 1 250px;margin:10px;}
+.key-card{background:#225522;padding:10px;border-radius:10px;margin:8px;text-align:left;display:flex;justify-content:space-between;align-items:center;}
+.key-card div{flex:1;}
 .key-card p{margin:3px 0;}
-.key-card button{background:#ff5555; padding:5px 10px; font-size:12px;}
+.key-card button{background:#ff5555;padding:5px 10px;font-size:12px;margin:2px;}
 </style>
 </head>
 <body>
@@ -43,82 +45,69 @@ input{ width:90%; padding:10px; margin:6px 0; border-radius:8px; border:none; ba
 <div id="main"></div>
 
 <script>
-let currentUser = null;
+let currentUser=null;
+let keysInterval=null;
 
 // APIs
-const USERS_API = "https://gerador-online-9fqv.vercel.app/dados";
-const KEYS_API = "https://teste-api-mcok.vercel.app/keys";
+const USERS_API="https://gerador-online-9fqv.vercel.app/dados";
+const KEYS_API="https://teste-api-mcok.vercel.app/keys";
 
 // Menu toggle
 function toggleMenu(){ 
   document.getElementById("dropdown").style.display=document.getElementById("dropdown").style.display==="flex"?"none":"flex"; 
 }
 
-// Página inicial com cards
+// Home
 function showHome(){
-  document.getElementById("main").innerHTML = `
-    <div class="cards-container">
-      <div class="card">
-        <h3>Gerador de Keys</h3>
-        <p>Crie suas keys rapidamente</p>
-      </div>
-      <div class="card">
-        <h3>Controle de Planos</h3>
-        <p>Atribua e gerencie planos dos usuários</p>
-      </div>
-      <div class="card">
-        <h3>Segurança</h3>
-        <p>Revogue e resete dispositivos quando necessário</p>
-      </div>
-      <div class="card">
-        <h3>Suporte</h3>
-        <p>Entre no Discord para ajuda e adquirir plano</p>
-        <button onclick="window.open('https://discord.gg/ferraocheats','_blank')">Adquirir Plano</button>
-      </div>
-    </div>`;
+  document.getElementById("main").innerHTML=`
+  <div class="cards-container">
+    <div class="card"><h3>Gerador de Keys</h3><p>Crie suas keys rapidamente</p></div>
+    <div class="card"><h3>Controle de Planos</h3><p>Atribua e gerencie planos dos usuários</p></div>
+    <div class="card"><h3>Segurança</h3><p>Revogue e resete dispositivos quando necessário</p></div>
+    <div class="card"><h3>Suporte</h3><p>Entre no Discord para ajuda e adquirir plano</p>
+      <button onclick="window.open('https://discord.gg/ferraocheats','_blank')">Adquirir Plano</button></div>
+  </div>`;
 }
 
 // Login
 function showLogin(){
-  document.getElementById("main").innerHTML = `
-    <div class="card">
-      <h2>Entrar</h2>
-      <input type="text" id="loginUser" placeholder="Usuário">
-      <input type="password" id="loginPass" placeholder="Senha">
-      <button onclick="login()">Entrar</button>
-      <p id="loginStatus" style="color:#ff5555;"></p>
-    </div>`;
+  document.getElementById("main").innerHTML=`
+  <div class="card">
+    <h2>Entrar</h2>
+    <input type="text" id="loginUser" placeholder="Usuário">
+    <input type="password" id="loginPass" placeholder="Senha">
+    <button onclick="login()">Entrar</button>
+    <p id="loginStatus" style="color:#ff5555;"></p>
+  </div>`;
 }
 
 async function login(){
-  const u = document.getElementById("loginUser").value.trim();
-  const p = document.getElementById("loginPass").value.trim();
-  const status = document.getElementById("loginStatus");
-  if(!u||!p){ status.innerText="Preencha os campos"; return; }
-
+  const u=document.getElementById("loginUser").value.trim();
+  const p=document.getElementById("loginPass").value.trim();
+  const status=document.getElementById("loginStatus");
+  if(!u||!p){status.innerText="Preencha os campos"; return;}
   try{
-    const res = await fetch(USERS_API);
-    if(!res.ok) throw new Error("Erro HTTP: "+res.status);
-    const users = await res.json();
-    const user = users.find(x=>x.username===u && x.password===p);
-    if(!user){ status.innerText="Usuário ou senha inválidos"; return; }
-
+    const res=await fetch(USERS_API);
+    if(!res.ok) throw new Error("Erro HTTP:"+res.status);
+    const users=await res.json();
+    const user=users.find(x=>x.username===u && x.password===p);
+    if(!user){status.innerText="Usuário ou senha inválidos"; return;}
     currentUser=user;
     showDashboard();
-  }catch(e){ status.innerText="Erro ao conectar API"; console.error(e);}
+  }catch(e){status.innerText="Erro ao conectar API"; console.error(e);}
 }
 
 // Cadastro
 function showRegister(){
-  document.getElementById("main").innerHTML = `
-    <div class="card">
-      <h2>Cadastrar</h2>
-      <div><img src="https://via.placeholder.com/60" class="avatar" id="regAvatar" onclick="uploadAvatar(this)"></div>
-      <input type="text" id="regUser" placeholder="Usuário">
-      <input type="password" id="regPass" placeholder="Senha">
-      <button onclick="register()">Cadastrar</button>
-      <p id="regStatus" style="color:#ff5555;"></p>
-    </div>`;
+  document.getElementById("main").innerHTML=`
+  <div class="card">
+    <h2>Cadastrar</h2>
+    <div><img src="https://via.placeholder.com/60" class="avatar" id="regAvatar" onclick="uploadAvatar(this)"></div>
+    <input type="text" id="regUser" placeholder="Usuário">
+    <input type="password" id="regPass" placeholder="Senha">
+    <button onclick="register()">Cadastrar</button>
+    <p id="regStatus" style="color:#ff5555;"></p>
+  </div>`;
 }
 
 function uploadAvatar(img){
@@ -132,12 +121,11 @@ async function register(){
   const p=document.getElementById("regPass").value.trim();
   const avatar=document.getElementById("regAvatar").src;
   const status=document.getElementById("regStatus");
-  if(!u||!p){status.innerText="Preencha os campos!";return;}
-
+  if(!u||!p){status.innerText="Preencha os campos";return;}
   try{
     const res=await fetch(USERS_API,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({username:u,password:p,avatar})});
     if(!res.ok){ const err=await res.json(); status.innerText=err.error||"Erro ao criar usuário"; return; }
-    alert("Cadastro realizado com sucesso!");
+    alert("Cadastro realizado!");
     showLogin();
   }catch(e){status.innerText="Erro ao conectar API";console.error(e);}
 }
@@ -147,41 +135,38 @@ function showDashboard(){
   document.getElementById("btnLogout").style.display="inline-block";
   document.getElementById("userHeader").textContent=`${currentUser.username} (${currentUser.plan||'Sem plano'})`;
 
+  if(keysInterval) clearInterval(keysInterval);
+
   if(currentUser.admin){
     document.getElementById("main").innerHTML=`
       <div class="card"><h2>Painel Admin</h2>
-        <button onclick="adminLoadUsers()">Carregar Usuários</button>
-      </div>
+        <button onclick="adminLoadUsers()">Carregar Usuários</button></div>
       <div id="usersList"></div>`;
   }else{
     document.getElementById("main").innerHTML=`
-      <div class="card">
-        <h2>Dashboard</h2>
-        <img src="${currentUser.avatar}" class="avatar">
-        <p>Plano: ${currentUser.plan||'Sem plano'}</p>
-        <p>Expira em: <span id="planCountdown">--</span></p>
-        <p>Keys geradas: <span id="keysCount">${currentUser.keysGenerated||0}</span>/${currentUser.planLimit||0}</p>
-        <button onclick="showGenerateKey()">Gerar key</button>
-      </div>
-      <div id="userKeys"></div>`;
-    loadUserKeys();
+    <div class="card">
+      <h2>Dashboard</h2>
+      <img src="${currentUser.avatar}" class="avatar">
+      <p>Plano: ${currentUser.plan||'Sem plano'}</p>
+      <p>Expira em: <span id="planCountdown">--</span></p>
+      <p>Keys geradas: <span id="keysCount">${currentUser.keysGenerated||0}</span>/${currentUser.planLimit||0}</p>
+      <button onclick="showGenerateKey()">Gerar key</button>
+    </div>
+    <div id="userKeys"></div>`;
+    loadUserKeys(true);
     startCountdown();
   }
 }
 
-// Contador automático de plano
+// Countdown do plano
 function startCountdown(){
   if(!currentUser.planEnd) return;
-  const span = document.getElementById("planCountdown");
-  const interval = setInterval(()=>{
-    const now = new Date();
-    const end = new Date(currentUser.planEnd);
-    let diff = end - now;
-    if(diff<=0){ span.innerText="Expirado"; clearInterval(interval); return; }
-    const d=Math.floor(diff/86400000);
-    diff%=86400000;
-    const h=Math.floor(diff/3600000);
-    diff%=3600000;
+  const span=document.getElementById("planCountdown");
+  const interval=setInterval(()=>{
+    const now=new Date(); const end=new Date(currentUser.planEnd);
+    let diff=end-now; if(diff<=0){span.innerText="Expirado"; clearInterval(interval); return;}
+    const d=Math.floor(diff/86400000); diff%=86400000;
+    const h=Math.floor(diff/3600000); diff%=3600000;
     const m=Math.floor(diff/60000);
     const s=Math.floor((diff%60000)/1000);
     span.innerText=`${d}d ${h}h ${m}m ${s}s`;
@@ -190,130 +175,79 @@ function startCountdown(){
 
 // Gerar key
 function showGenerateKey(){
-  if(!currentUser.plan){ alert("Adquira um plano para gerar keys!"); return; }
-  if(currentUser.keysGenerated>=currentUser.planLimit){ alert("Limite de keys atingido!"); return; }
+  if(!currentUser.plan){ alert("Adquira um plano!"); return;}
+  if(currentUser.keysGenerated>=currentUser.planLimit){ alert("Limite de keys atingido!"); return;}
 
-  const tipo=prompt("Tipo de key (hour/day/month/year):"); 
-  if(!tipo) return;
-
-  let prefix = "FERRAO-CHEATS-";
-  if(currentUser.plan === "avancado" || currentUser.admin){
-    const custom = prompt("Prefixo (ou deixe vazio para padrão):");
-    if(custom) prefix = custom.toUpperCase()+"-";
+  const tipo=prompt("Tipo de key (hour/day/month/year):"); if(!tipo) return;
+  let prefix="FERRAO-CHEATS-";
+  if(currentUser.plan==="avancado"||currentUser.admin){
+    const custom=prompt("Prefixo (ou deixe vazio para padrão):");
+    if(custom) prefix=custom.toUpperCase()+"-";
   }
-
   const randomStr=Math.random().toString(36).substring(2,10).toUpperCase();
   const newKey=`${prefix}${randomStr}`;
 
-  fetch(KEYS_API,{
-    method:"POST",
-    headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({key:newKey,type:tipo,username:currentUser.username,deviceUsed:null,active:true})
-  })
-  .then(()=> {
-    alert("Key gerada!");
-    currentUser.keysGenerated = (currentUser.keysGenerated||0)+1;
-    showDashboard();
-  })
+  fetch(KEYS_API,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({key:newKey,type:tipo,username:currentUser.username,deviceUsed:null,active:true})})
+  .then(()=>{currentUser.keysGenerated++; document.getElementById("keysCount").innerText=currentUser.keysGenerated; loadUserKeys(true);})
   .catch(()=>alert("Erro ao gerar key"));
 }
 
-// Carregar keys do usuário
-async function loadUserKeys(){
-  try{
-    const res = await fetch(KEYS_API);
-    const keys = await res.json();
-    const userKeys = keys.filter(k=>k.username===currentUser.username);
-    const div = document.getElementById("userKeys");
-    div.innerHTML="";
+// Load keys em tempo real
+function loadUserKeys(autoRefresh=false){
+  fetch(KEYS_API).then(res=>res.json()).then(keys=>{
+    const userKeys=keys.filter(k=>k.username===currentUser.username);
+    const div=document.getElementById("userKeys"); div.innerHTML="";
     userKeys.forEach(k=>{
       div.innerHTML+=`
-        <div class="key-card">
-          <div>
-            <p><strong>Key:</strong> ${k.key}</p>
-            <p><strong>Tipo:</strong> ${k.type}</p>
-            <p><strong>Device:</strong> ${k.deviceUsed||"Nenhum"}</p>
-            <p><strong>Status:</strong> ${k.active?"Ativa":"Expirada"}</p>
-          </div>
-          <div>
-            <button onclick="revokeKey('${k.key}')">Revogar</button>
-            <button onclick="resetDevice('${k.key}')">Reset Device</button>
-            <button onclick="deleteKey('${k.key}')">Excluir</button>
-          </div>
-        </div>`;
+      <div class="key-card">
+        <div>
+          <p><strong>Key:</strong> ${k.key}</p>
+          <p><strong>Tipo:</strong> ${k.type}</p>
+          <p><strong>Device:</strong> ${k.deviceUsed||"Nenhum"}</p>
+          <p><strong>Status:</strong> ${k.active?"Ativa":"Expirada"}</p>
+        </div>
+        <div>
+          <button onclick="revokeKey('${k.key}')">Revogar</button>
+          <button onclick="resetDevice('${k.key}')">Reset Device</button>
+          <button onclick="deleteKey('${k.key}')">Excluir</button>
+        </div>
+      </div>`;
     });
-  }catch(e){console.error(e);}
+    if(autoRefresh) keysInterval=setTimeout(()=>loadUserKeys(true),3000);
+  }).catch(e=>console.error(e));
 }
 
 // Key management
-async function revokeKey(key){
-  try{
-    await fetch(`${KEYS_API}/${key}`,{
-      method:"PUT",
-      headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({active:false})
-    });
-    alert("Key revogada!");
-    loadUserKeys();
-  }catch(e){alert("Erro ao revogar key");console.error(e);}
-}
+function revokeKey(key){fetch(`${KEYS_API}/${key}`,{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({active:false})}).then(()=>loadUserKeys(true));}
+function resetDevice(key){fetch(`${KEYS_API}/${key}`,{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({deviceUsed:null})}).then(()=>loadUserKeys(true));}
+function deleteKey(key){fetch(`${KEYS_API}/${key}`,{method:"DELETE"}).then(()=>{currentUser.keysGenerated--; document.getElementById("keysCount").innerText=currentUser.keysGenerated; loadUserKeys(true);});}
 
-async function resetDevice(key){
-  try{
-    await fetch(`${KEYS_API}/${key}`,{
-      method:"PUT",
-      headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({deviceUsed:null})
-    });
-    alert("Device resetado!");
-    loadUserKeys();
-  }catch(e){alert("Erro ao resetar device");console.error(e);}
-}
-
-async function deleteKey(key){
-  try{
-    await fetch(`${KEYS_API}/${key}`,{
-      method:"DELETE"
-    });
-    alert("Key excluída!");
-    currentUser.keysGenerated--;
-    loadUserKeys();
-  }catch(e){alert("Erro ao excluir key");console.error(e);}
-}
-
-// Admin funções
+// Admin
 async function adminLoadUsers(){
-  try{
-    const res=await fetch(USERS_API);
-    if(!res.ok) throw new Error("Erro HTTP: "+res.status);
-    const users=await res.json();
-    const div=document.getElementById("usersList"); div.innerHTML="";
-    users.forEach(u=>{
-      div.innerHTML+=`
-      <div class="card">
-        <img src="${u.avatar}" class="avatar">
-        <p>${u.username} — ${u.plan||'Nenhum'}</p>
-        <p>Keys: ${u.keysGenerated||0}/${u.planLimit||0}</p>
-        <button onclick="promptAssignPlan('${u.username}')">Atribuir Plano</button>
-        <button onclick="promptRevokePlan('${u.username}')">Revogar Plano</button>
-        <button onclick="promptResetDevice('${u.username}')">Resetar Device</button>
-      </div>`;
-    });
-  }catch(e){alert("Erro ao carregar usuários");console.error(e);}
+  const res=await fetch(USERS_API); const users=await res.json();
+  const div=document.getElementById("usersList"); div.innerHTML="";
+  users.forEach(u=>{
+    div.innerHTML+=`
+    <div class="card">
+      <img src="${u.avatar}" class="avatar">
+      <p>${u.username} — ${u.plan||'Nenhum'}</p>
+      <p>Keys: ${u.keysGenerated||0}/${u.planLimit||0}</p>
+      <button onclick="promptAssignPlan('${u.username}')">Atribuir Plano</button>
+      <button onclick="promptRevokePlan('${u.username}')">Revogar Plano</button>
+      <button onclick="promptResetDevice('${u.username}')">Resetar Device</button>
+    </div>`;
+  });
 }
-
-// Planos admin
 async function promptAssignPlan(username){
-  const plan=prompt("Nome do plano (basico/avancado):");
+  const plan=prompt("Plano (basico/avancado):");
   const limit=parseInt(prompt("Limite de keys:"));
   const days=parseInt(prompt("Duração em dias:"));
   const planEnd=new Date(Date.now()+days*86400000).toISOString();
-  try{await fetch(`${USERS_API}/${username}`,{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({plan,planLimit:limit,planEnd})}); alert("Plano atribuído!"); adminLoadUsers();}catch(e){alert("Erro ao atualizar plano");console.error(e);}
+  await fetch(`${USERS_API}/${username}`,{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({plan,planLimit:limit,planEnd})});
+  alert("Plano atribuído!"); adminLoadUsers();
 }
-async function promptRevokePlan(username){try{await fetch(`${USERS_API}/${username}`,{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({plan:null,planLimit:0,planEnd:null})}); alert("Plano revogado!"); adminLoadUsers();}catch(e){alert("Erro ao revogar plano");console.error(e);}
-}
-async function promptResetDevice(username){try{await fetch(`${USERS_API}/${username}`,{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({device:null})}); alert("Device resetado!"); adminLoadUsers();}catch(e){alert("Erro ao resetar device");console.error(e);}
-}
+async function promptRevokePlan(username){await fetch(`${USERS_API}/${username}`,{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({plan:null,planLimit:0,planEnd:null})}); alert("Plano revogado!"); adminLoadUsers();}
+async function promptResetDevice(username){await fetch(`${USERS_API}/${username}`,{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({device:null})}); alert("Device resetado!"); adminLoadUsers();}
 
 // Logout
 function logout(){currentUser=null; document.getElementById("btnLogout").style.display="none"; document.getElementById("userHeader").textContent=""; showHome();}
