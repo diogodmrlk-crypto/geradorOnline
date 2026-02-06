@@ -18,6 +18,8 @@ input{ width:90%; padding:10px; margin:6px 0; border-radius:8px; border:none; ba
 .avatar{width:60px;height:60px;border-radius:50%;object-fit:cover;border:2px solid #3fc03f; cursor:pointer;}
 .cards-container{display:flex; flex-wrap:wrap; justify-content:center; margin-top:20px;}
 .cards-container .card{flex:1 1 250px; margin:10px;}
+.key-card{background:#225522; padding:10px; border-radius:10px; margin:8px; text-align:left;}
+.key-card p{margin:3px 0;}
 </style>
 </head>
 <body>
@@ -47,7 +49,9 @@ const USERS_API = "https://gerador-online-9fqv.vercel.app/dados";
 const KEYS_API = "https://teste-api-mcok.vercel.app/keys";
 
 // Menu toggle
-function toggleMenu(){ document.getElementById("dropdown").style.display=document.getElementById("dropdown").style.display==="flex"?"none":"flex"; }
+function toggleMenu(){ 
+  document.getElementById("dropdown").style.display=document.getElementById("dropdown").style.display==="flex"?"none":"flex"; 
+}
 
 // Página inicial com cards
 function showHome(){
@@ -154,11 +158,76 @@ function showDashboard(){
         <h2>Dashboard</h2>
         <img src="${currentUser.avatar}" class="avatar">
         <p>Plano: ${currentUser.plan||'Sem plano'}</p>
+        <p>Expira em: <span id="planCountdown">--</span></p>
         <p>Keys geradas: ${currentUser.keysGenerated||0}/${currentUser.planLimit||0}</p>
         <button onclick="showGenerateKey()">Gerar key</button>
       </div>
       <div id="userKeys"></div>`;
+    loadUserKeys();
+    startCountdown();
   }
+}
+
+// Contador automático de plano
+function startCountdown(){
+  if(!currentUser.planEnd) return;
+  const span = document.getElementById("planCountdown");
+  const interval = setInterval(()=>{
+    const now = new Date();
+    const end = new Date(currentUser.planEnd);
+    let diff = end - now;
+    if(diff<=0){ span.innerText="Expirado"; clearInterval(interval); return; }
+    const d=Math.floor(diff/86400000);
+    diff%=86400000;
+    const h=Math.floor(diff/3600000);
+    diff%=3600000;
+    const m=Math.floor(diff/60000);
+    const s=Math.floor((diff%60000)/1000);
+    span.innerText=`${d}d ${h}h ${m}m ${s}s`;
+  },1000);
+}
+
+// Gerar key
+function showGenerateKey(){
+  if(!currentUser.plan){ alert("Adquira um plano para gerar keys!"); return; }
+  if(currentUser.keysGenerated>=currentUser.planLimit){ alert("Limite de keys atingido!"); return; }
+
+  const tipo=prompt("Tipo de key (hour/day/month/year):"); 
+  if(!tipo) return;
+
+  const randomStr=Math.random().toString(36).substring(2,10).toUpperCase();
+  const newKey=`FERRAO-CHEATS-${randomStr}`;
+
+  fetch(KEYS_API,{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({key:newKey,type:tipo,username:currentUser.username,deviceUsed:false})
+  })
+  .then(()=> {
+    alert("Key gerada!");
+    currentUser.keysGenerated = (currentUser.keysGenerated||0)+1;
+    showDashboard();
+  })
+  .catch(()=>alert("Erro ao gerar key"));
+}
+
+// Carregar keys do usuário
+async function loadUserKeys(){
+  try{
+    const res = await fetch(KEYS_API);
+    const keys = await res.json();
+    const userKeys = keys.filter(k=>k.username===currentUser.username);
+    const div = document.getElementById("userKeys");
+    div.innerHTML="";
+    userKeys.forEach(k=>{
+      div.innerHTML+=`
+        <div class="key-card">
+          <p><strong>Key:</strong> ${k.key}</p>
+          <p><strong>Tipo:</strong> ${k.type}</p>
+          <p><strong>Device usado:</strong> ${k.deviceUsed ? k.deviceUsed : 'Nenhum'}</p>
+        </div>`;
+    });
+  }catch(e){console.error(e);}
 }
 
 // Admin funções
@@ -182,7 +251,7 @@ async function adminLoadUsers(){
   }catch(e){alert("Erro ao carregar usuários");console.error(e);}
 }
 
-// Atribuir plano
+// Planos admin
 async function promptAssignPlan(username){
   const plan=prompt("Nome do plano:");
   const limit=parseInt(prompt("Limite de keys:"));
@@ -193,16 +262,6 @@ async function promptAssignPlan(username){
 async function promptRevokePlan(username){try{await fetch(`${USERS_API}/${username}`,{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({plan:null,planLimit:0,planEnd:null})}); alert("Plano revogado!"); adminLoadUsers();}catch(e){alert("Erro ao revogar plano");console.error(e);}
 }
 async function promptResetDevice(username){try{await fetch(`${USERS_API}/${username}`,{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({device:null})}); alert("Device resetado!"); adminLoadUsers();}catch(e){alert("Erro ao resetar device");console.error(e);}
-}
-
-// Gerar key
-function showGenerateKey(){
-  if(!currentUser.plan){ alert("Adquira um plano para gerar keys!"); return; }
-  const tipo=prompt("Tipo de key (hour/day/month/year):"); if(!tipo) return;
-  const randomStr=Math.random().toString(36).substring(2,10).toUpperCase();
-  const newKey=`FERRAO-CHEATS-${randomStr}`;
-  fetch(KEYS_API,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({key:newKey,type:tipo,username:currentUser.username,deviceUsed:false})})
-    .then(()=>alert("Key gerada!")).catch(()=>alert("Erro ao gerar key"));
 }
 
 // Logout
