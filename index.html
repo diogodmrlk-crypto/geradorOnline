@@ -67,6 +67,14 @@ margin:5px;
 font-weight:bold;
 }
 
+button.danger{
+background:#c03f3f;
+}
+
+button.warning{
+background:#c0a03f;
+}
+
 input,select{
 width:90%;
 padding:12px;
@@ -84,6 +92,54 @@ padding:10px;
 border-radius:10px;
 margin-top:8px;
 text-align:left;
+}
+
+.userTab{
+background:#225522;
+padding:15px;
+border-radius:10px;
+margin:10px 0;
+cursor:pointer;
+transition:0.3s;
+}
+
+.userTab:hover{
+background:#2a6b2a;
+}
+
+.userDetails{
+display:none;
+background:#1a4a1a;
+padding:15px;
+border-radius:10px;
+margin-top:10px;
+}
+
+.timer{
+color:#3fc03f;
+font-weight:bold;
+}
+
+.expired{
+color:#c03f3f;
+}
+
+.limit-warning{
+background:#c0a03f;
+color:#000;
+padding:10px;
+border-radius:10px;
+margin:10px 0;
+font-weight:bold;
+}
+
+.limit-error{
+background:#c03f3f;
+color:#fff;
+padding:10px;
+border-radius:10px;
+margin:10px 0;
+font-weight:bold;
 }
 </style>
 </head>
@@ -110,6 +166,7 @@ text-align:left;
 <script>
 
 let currentUser=null;
+let timers={};
 
 const USERS_API="https://gerador-online-9fqv.vercel.app/dados";
 const KEYS_API="https://teste-api-mcok.vercel.app/keys";
@@ -172,48 +229,66 @@ headers:{"Content-Type":"application/json"},
 body:JSON.stringify({
 username:regUser.value,
 password:regPass.value,
-plan:"basico"
+plan:"basico",
+admin:false,
+keysGenerated:0
 })
 });
 alert("Criado");
 showLogin();
 }
 
-function showDashboard(){
+async function showDashboard(){
 
 // ADMIN
 if(currentUser.admin){
-
-main.innerHTML=`
-<div class="card">
-<h2>Painel Admin</h2>
-<button onclick="loadAllKeys()">Ver Todas Keys</button>
-<div id="adminKeys"></div>
-</div>`;
+await showAdminPanel();
 return;
 }
 
 // USER BASICO GERADOR
+const keysRes=await fetch(KEYS_API);
+const allKeys=await keysRes.json();
+const userKeysCount=allKeys.filter(k=>k.username===currentUser.username).length;
+
+const limit=currentUser.plan==="avancado"?999999:500;
+const remaining=limit-userKeysCount;
+
+let limitHtml="";
+if(remaining<=0){
+limitHtml=`<div class="limit-error">❌ LIMITE ATINGIDO (${userKeysCount}/${limit})</div>`;
+}else if(remaining<=50){
+limitHtml=`<div class="limit-warning">⚠️ Você tem ${remaining} keys restantes de ${limit}</div>`;
+}else{
+limitHtml=`<div style="color:#3fc03f;margin:10px 0;">✅ Keys: ${userKeysCount}/${limit}</div>`;
+}
+
 main.innerHTML=`
 
 <div class="card">
 
 <h2>Gerador de Keys</h2>
 
+${limitHtml}
+
 <label>Prefixo</label>
 <input id="prefix" value="FERRAO-CHEATS-">
 
 <label>Quantidade</label>
-<input id="qty" type="number" value="1">
+<input id="qty" type="number" value="1" max="${remaining}">
 
 <label>Tipo</label>
 <select id="type">
-<option value="hour">1 Hora</option>
-<option value="day">1 Dia</option>
-<option value="month">1 Mês</option>
+<option value="hour-1">1 Hora</option>
+<option value="hour-3">3 Horas</option>
+<option value="hour-6">6 Horas</option>
+<option value="hour-12">12 Horas</option>
+<option value="daily">1 Dia</option>
+<option value="weekly">1 Semana</option>
+<option value="perm">Vitalícia</option>
 </select>
 
-<button onclick="generate()">Gerar</button>
+<button onclick="generate()" ${remaining<=0?"disabled":""}>Gerar</button>
 
 <pre id="genOut">---</pre>
 
@@ -229,6 +304,135 @@ main.innerHTML=`
 loadUserKeys();
 }
 
+async function showAdminPanel(){
+
+const usersRes=await fetch(USERS_API);
+const users=await usersRes.json();
+
+const keysRes=await fetch(KEYS_API);
+const allKeys=await keysRes.json();
+
+main.innerHTML=`
+<div class="card">
+<h2>🔧 Painel Admin</h2>
+<p>Gerenciar todos os usuários e keys</p>
+<div id="adminUsers"></div>
+</div>`;
+
+const adminUsers=document.getElementById("adminUsers");
+
+users.forEach(user=>{
+
+const userKeys=allKeys.filter(k=>k.username===user.username);
+
+adminUsers.innerHTML+=`
+<div class="userTab" onclick="toggleUserDetails('${user.username}')">
+<b>👤 ${user.username}</b> 
+<span style="float:right;">
+Plano: ${user.plan||"basico"} | Keys: ${userKeys.length}
+</span>
+</div>
+
+<div id="details-${user.username}" class="userDetails">
+<h3>Gerenciar ${user.username}</h3>
+
+<label>Plano:</label>
+<select id="plan-${user.username}">
+<option value="basico" ${user.plan==="basico"?"selected":""}>Básico (500 keys)</option>
+<option value="avancado" ${user.plan==="avancado"?"selected":""}>Avançado (ilimitado)</option>
+</select>
+
+<button onclick="updateUserPlan('${user.username}')">Atualizar Plano</button>
+<button class="danger" onclick="revokeUserPlan('${user.username}')">Revogar Plano</button>
+<button class="warning" onclick="deleteUser('${user.username}')">Excluir Usuário</button>
+
+<h4 style="margin-top:20px;">Keys de ${user.username} (${userKeys.length})</h4>
+<div id="keys-${user.username}"></div>
+
+</div>
+`;
+
+// Renderizar keys do usuário
+setTimeout(()=>{
+const keysDiv=document.getElementById(`keys-${user.username}`);
+if(keysDiv){
+userKeys.forEach(k=>{
+keysDiv.innerHTML+=renderKeyItem(k,true);
+});
+startTimers();
+}
+},100);
+
+});
+}
+
+function toggleUserDetails(username){
+const details=document.getElementById(`details-${username}`);
+details.style.display=details.style.display==="block"?"none":"block";
+}
+
+async function updateUserPlan(username){
+const newPlan=document.getElementById(`plan-${username}`).value;
+
+const usersRes=await fetch(USERS_API);
+const users=await usersRes.json();
+const user=users.find(u=>u.username===username);
+
+if(!user) return alert("Usuário não encontrado");
+
+await fetch(USERS_API+"/"+user.id,{
+method:"PUT",
+headers:{"Content-Type":"application/json"},
+body:JSON.stringify({...user,plan:newPlan})
+});
+
+alert(`Plano de ${username} atualizado para ${newPlan}`);
+showAdminPanel();
+}
+
+async function revokeUserPlan(username){
+if(!confirm(`Revogar plano de ${username}?`)) return;
+
+const usersRes=await fetch(USERS_API);
+const users=await usersRes.json();
+const user=users.find(u=>u.username===username);
+
+if(!user) return alert("Usuário não encontrado");
+
+await fetch(USERS_API+"/"+user.id,{
+method:"PUT",
+headers:{"Content-Type":"application/json"},
+body:JSON.stringify({...user,plan:null})
+});
+
+alert(`Plano de ${username} revogado`);
+showAdminPanel();
+}
+
+async function deleteUser(username){
+if(!confirm(`EXCLUIR usuário ${username}? Isso é irreversível!`)) return;
+
+const usersRes=await fetch(USERS_API);
+const users=await usersRes.json();
+const user=users.find(u=>u.username===username);
+
+if(!user) return alert("Usuário não encontrado");
+
+await fetch(USERS_API+"/"+user.id,{method:"DELETE"});
+
+// Excluir todas as keys do usuário
+const keysRes=await fetch(KEYS_API);
+const allKeys=await keysRes.json();
+const userKeys=allKeys.filter(k=>k.username===username);
+
+for(let key of userKeys){
+await fetch(KEYS_API+"/"+key.key,{method:"DELETE"});
+}
+
+alert(`Usuário ${username} excluído`);
+showAdminPanel();
+}
+
 function rand(len){
 const chars="ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
 let s="";
@@ -242,9 +446,26 @@ async function generate(){
 
 if(!currentUser.plan) return alert("Você não possui plano");
 
-genOut.textContent="";
+const keysRes=await fetch(KEYS_API);
+const allKeys=await keysRes.json();
+const userKeysCount=allKeys.filter(k=>k.username===currentUser.username).length;
 
-for(let i=0;i<qty.value;i++){
+const limit=currentUser.plan==="avancado"?999999:500;
+
+if(userKeysCount>=limit){
+return alert("LIMITE ATINGIDO! Você não pode gerar mais keys.");
+}
+
+const qtyRequested=parseInt(qty.value);
+const remaining=limit-userKeysCount;
+
+if(qtyRequested>remaining){
+return alert(`Você só pode gerar mais ${remaining} keys!`);
+}
+
+genOut.textContent="Gerando...\n";
+
+for(let i=0;i<qtyRequested;i++){
 
 const key=prefix.value+rand(8);
 
@@ -256,14 +477,43 @@ key:key,
 type:type.value,
 username:currentUser.username,
 used:false,
-device:null
+device:null,
+createdAt:Date.now()
 })
 });
 
 genOut.textContent+=key+"\n";
 }
 
-await loadUserKeys();
+await showDashboard();
+}
+
+function renderKeyItem(k,isAdmin=false){
+
+let timeDisplay="";
+let isExpired=false;
+
+if(k.type!=="perm"){
+const result=calculateTimeRemaining(k);
+timeDisplay=result.display;
+isExpired=result.expired;
+}else{
+timeDisplay="<span style='color:#ffd700;'>♾️ VITALÍCIA</span>";
+}
+
+return `
+<div class="keyItem">
+<b>${k.key}</b><br>
+Tipo: ${k.type}<br>
+Device: ${k.device||"—"}<br>
+Status: ${isExpired?"<span class='expired'>EXPIRADA</span>":timeDisplay}
+<div id="timer-${k.key}"></div>
+
+<button onclick="revokeKey('${k.key}',${isAdmin})">Revogar</button>
+<button onclick="resetDevice('${k.key}',${isAdmin})">Resetar Device</button>
+<button class="danger" onclick="deleteKey('${k.key}',${isAdmin})">Excluir</button>
+
+</div>`;
 }
 
 async function loadUserKeys(){
@@ -276,63 +526,141 @@ userKeys.innerHTML="";
 data
 .filter(k=>k.username===currentUser.username)
 .forEach(k=>{
+userKeys.innerHTML+=renderKeyItem(k,false);
+});
 
-userKeys.innerHTML+=`
-<div class="keyItem">
-<b>${k.key}</b><br>
-Tipo: ${k.type}<br>
-Device: ${k.device||"—"}<br>
+startTimers();
+}
 
-<button onclick="revokeKey('${k.key}')">Revogar</button>
-<button onclick="resetDevice('${k.key}')">Resetar</button>
-<button onclick="deleteKey('${k.key}')">Excluir</button>
+function calculateTimeRemaining(key){
 
-</div>`;
+if(!key.createdAt){
+return {display:"⏳ Aguardando ativação",expired:false};
+}
+
+const created=key.createdAt;
+const now=Date.now();
+const elapsed=now-created;
+
+let duration=0;
+
+if(key.type.startsWith("hour-")){
+const hours=parseInt(key.type.split("-")[1]);
+duration=hours*60*60*1000;
+}else if(key.type==="daily"){
+duration=24*60*60*1000;
+}else if(key.type==="weekly"){
+duration=7*24*60*60*1000;
+}else if(key.type==="perm"){
+return {display:"♾️ VITALÍCIA",expired:false};
+}
+
+const remaining=duration-elapsed;
+
+if(remaining<=0){
+return {display:"<span class='expired'>⏰ EXPIRADA</span>",expired:true};
+}
+
+const hours=Math.floor(remaining/(60*60*1000));
+const minutes=Math.floor((remaining%(60*60*1000))/(60*1000));
+const seconds=Math.floor((remaining%(60*1000))/1000);
+
+return {
+display:`<span class='timer'>⏱️ ${hours}h ${minutes}m ${seconds}s</span>`,
+expired:false,
+remaining:remaining
+};
+}
+
+function startTimers(){
+
+// Limpar timers antigos
+for(let key in timers){
+clearInterval(timers[key]);
+}
+timers={};
+
+// Buscar todas as keys
+fetch(KEYS_API).then(res=>res.json()).then(allKeys=>{
+
+allKeys.forEach(key=>{
+
+const timerEl=document.getElementById(`timer-${key.key}`);
+
+if(!timerEl || key.type==="perm") return;
+
+timers[key.key]=setInterval(()=>{
+
+const result=calculateTimeRemaining(key);
+
+if(timerEl){
+timerEl.innerHTML=result.display;
+}
+
+if(result.expired){
+clearInterval(timers[key.key]);
+}
+
+},1000);
+
+});
 });
 }
 
-async function loadAllKeys(){
+async function revokeKey(key,isAdmin){
 
-const res=await fetch(KEYS_API);
-const data=await res.json();
-
-adminKeys.innerHTML="";
-
-data.forEach(k=>{
-adminKeys.innerHTML+=`
-<div class="keyItem">
-<b>${k.key}</b> — ${k.username}
-</div>`;
-});
-}
-
-async function revokeKey(key){
 await fetch(KEYS_API+"/"+key,{
 method:"PUT",
 headers:{"Content-Type":"application/json"},
 body:JSON.stringify({used:true})
 });
+
+if(isAdmin){
+showAdminPanel();
+}else{
 loadUserKeys();
 }
+}
 
-async function resetDevice(key){
+async function resetDevice(key,isAdmin){
+
 await fetch(KEYS_API+"/"+key,{
 method:"PUT",
 headers:{"Content-Type":"application/json"},
 body:JSON.stringify({device:null})
 });
+
+if(isAdmin){
+showAdminPanel();
+}else{
 loadUserKeys();
 }
+}
 
-async function deleteKey(key){
+async function deleteKey(key,isAdmin){
+
+if(!confirm("Excluir esta key permanentemente?")) return;
+
 await fetch(KEYS_API+"/"+key,{method:"DELETE"});
+
+if(isAdmin){
+showAdminPanel();
+}else{
 loadUserKeys();
+}
 }
 
 function logout(){
 currentUser=null;
 btnLogout.style.display="none";
 userHeader.innerText="";
+
+// Limpar timers
+for(let key in timers){
+clearInterval(timers[key]);
+}
+timers={};
+
 showHome();
 }
 
