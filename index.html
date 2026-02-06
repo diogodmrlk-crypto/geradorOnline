@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,14 +7,14 @@
 
 <style>
 body{
+margin:0;
+font-family:Arial;
 background:#061a0b;
 color:white;
-font-family:Arial;
-margin:0;
 }
 
-/* HEADER */
-header{
+/* NAVBAR */
+nav{
 background:#0c3b17;
 padding:15px;
 display:flex;
@@ -22,49 +22,65 @@ justify-content:space-between;
 align-items:center;
 }
 
-/* BOTÕES */
+.menu{
+cursor:pointer;
+font-size:25px;
+}
+
+.dropdown{
+display:none;
+position:absolute;
+right:15px;
+top:60px;
+background:#0b2413;
+padding:10px;
+border-radius:10px;
+}
+
+.dropdown button{
+display:block;
+width:150px;
+margin:5px 0;
+}
+
+/* PAGES */
+.page{
+display:none;
+padding:20px;
+}
+
+.active{
+display:block;
+}
+
+/* CARDS */
+.card{
+background:#0d2f17;
+padding:25px;
+border-radius:20px;
+box-shadow:0 0 20px #2ecc71;
+margin-top:20px;
+text-align:center;
+}
+
 .btn{
 background:#2ecc71;
 border:none;
-padding:10px 20px;
+padding:12px 25px;
 border-radius:12px;
 color:white;
 font-weight:bold;
 cursor:pointer;
-margin:3px;
+margin-top:10px;
 }
 
-/* DASHBOARD */
-.dashboard{
-margin:20px;
-background:#0d2f17;
-padding:30px;
-border-radius:25px;
-text-align:center;
-box-shadow:0 0 25px #2ecc71;
-}
-
-/* LISTA DE KEYS */
-.keyTable{
-margin:20px;
-background:#0b2413;
-border-radius:20px;
-padding:15px;
-}
-
+/* KEYS */
 .keyCard{
 background:#081a0d;
 padding:15px;
 border-radius:15px;
-margin-bottom:15px;
-animation:fade 0.5s ease;
-}
-
-.status{
-background:purple;
-padding:4px 12px;
-border-radius:12px;
-font-size:13px;
+margin-top:15px;
+animation:fade 0.5s;
 }
 
 @keyframes fade{
@@ -76,22 +92,59 @@ to{opacity:1; transform:translateY(0);}
 
 <body>
 
-<header>
+<nav>
 <div>Ferrao Generator</div>
-<div id="userInfo"></div>
-<button class="btn" onclick="logout()">Sair</button>
-</header>
+<div class="menu" onclick="toggleMenu()">☰</div>
+</nav>
 
-<div class="dashboard">
+<div class="dropdown" id="menuBox">
+<button onclick="showPage('home')">Home</button>
+<button onclick="showPage('login')">Entrar</button>
+<button onclick="showPage('register')">Cadastrar</button>
+<button onclick="logout()">Sair</button>
+</div>
+
+<!-- HOME -->
+<div id="home" class="page active">
+<div class="card">
+<h2>Gerador de Keys</h2>
+<p>Gere licenças para seus scripts</p>
+<button class="btn" onclick="window.open('https://discord.gg/ferraocheats')">Adquirir Plano</button>
+</div>
+</div>
+
+<!-- LOGIN -->
+<div id="login" class="page">
+<div class="card">
+<h2>Login</h2>
+<input id="loginUser" placeholder="Usuário"><br><br>
+<input id="loginPass" type="password" placeholder="Senha"><br><br>
+<button class="btn" onclick="login()">Entrar</button>
+</div>
+</div>
+
+<!-- CADASTRO -->
+<div id="register" class="page">
+<div class="card">
+<h2>Cadastrar</h2>
+<input id="regUser" placeholder="Usuário"><br><br>
+<input id="regPass" type="password" placeholder="Senha"><br><br>
+<button class="btn" onclick="register()">Criar Conta</button>
+</div>
+</div>
+
+<!-- DASHBOARD -->
+<div id="dashboard" class="page">
+<div class="card">
 <h2>Dashboard</h2>
-<div id="planInfo"></div>
-<br>
+<div id="dashInfo"></div>
 <button class="btn" onclick="gerarKey()">Gerar Key</button>
 </div>
 
-<div class="keyTable">
+<div class="card">
 <h3>Minhas Keys</h3>
-<div id="keysContainer"></div>
+<div id="keysList"></div>
+</div>
 </div>
 
 <script>
@@ -99,26 +152,75 @@ to{opacity:1; transform:translateY(0);}
 const USER_API="https://gerador-online-9fqv.vercel.app/dados";
 const KEY_API="https://teste-api-mcok.vercel.app/keys";
 
-/* ===== LOGIN CHECK SEM LOOP ===== */
+let user=null;
 
-let user = localStorage.getItem("user");
+/* MENU */
 
-if(!user){
-document.body.innerHTML="<h2 style='text-align:center;margin-top:50px'>Faça login primeiro</h2>";
-throw new Error("Sem login");
+function toggleMenu(){
+let m=document.getElementById("menuBox");
+m.style.display=m.style.display=="block"?"none":"block";
 }
 
-user = JSON.parse(user);
+/* PÁGINAS */
 
-document.getElementById("userInfo").innerText =
-user.username+" ("+(user.plan||"sem plano")+")";
+function showPage(id){
+document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));
+document.getElementById(id).classList.add("active");
+}
 
-/* ===== TEMPO RESTANTE ===== */
+/* LOGIN */
+
+async function login(){
+
+let u=document.getElementById("loginUser").value;
+let p=document.getElementById("loginPass").value;
+
+let res=await fetch(USER_API);
+let users=await res.json();
+
+let found=users.find(x=>x.username==u && x.password==p);
+
+if(!found){
+alert("Login inválido");
+return;
+}
+
+user=found;
+localStorage.setItem("user",JSON.stringify(user));
+
+abrirDashboard();
+}
+
+/* CADASTRO */
+
+async function register(){
+
+let u=document.getElementById("regUser").value;
+let p=document.getElementById("regPass").value;
+
+await fetch(USER_API,{
+method:"POST",
+headers:{"Content-Type":"application/json"},
+body:JSON.stringify({username:u,password:p})
+});
+
+alert("Conta criada!");
+showPage("login");
+}
+
+/* DASHBOARD */
+
+function abrirDashboard(){
+showPage("dashboard");
+atualizarDash();
+carregarKeys();
+}
+
+/* TEMPO */
 
 function tempoRestante(data){
 if(!data) return "Sem plano";
-
-let diff = new Date(data) - new Date();
+let diff=new Date(data)-new Date();
 if(diff<=0) return "Expirado";
 
 let d=Math.floor(diff/86400000);
@@ -129,62 +231,46 @@ let s=Math.floor(diff%60000/1000);
 return `${d}d ${h}h ${m}m ${s}s`;
 }
 
-/* ===== DASHBOARD ===== */
+function atualizarDash(){
 
-function atualizarDashboard(){
-
-document.getElementById("planInfo").innerHTML=
-`
-Plano: ${user.plan || "Nenhum"}<br>
-Expira em: ${tempoRestante(user.planEnd)}<br>
-Keys geradas: ${user.keysGenerated || 0}/${user.planLimit || 0}
+document.getElementById("dashInfo").innerHTML=`
+Plano: ${user.plan||"Nenhum"}<br>
+Expira: ${tempoRestante(user.planEnd)}<br>
+Keys: ${user.keysGenerated||0}/${user.planLimit||0}
 `;
 }
 
-/* ===== GERAR PREFIXO ===== */
+/* GERAR KEY */
 
 function gerarCodigo(){
-let chars="ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-let code="";
-for(let i=0;i<8;i++){
-code+=chars[Math.floor(Math.random()*chars.length)];
+let c="ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+let r="";
+for(let i=0;i<8;i++) r+=c[Math.floor(Math.random()*c.length)];
+return "FERRAO-CHEATS-"+r;
 }
-return "FERRAO-CHEATS-"+code;
-}
-
-/* ===== GERAR KEY ===== */
 
 async function gerarKey(){
 
 if(!user.plan){
-alert("Você não possui plano");
+alert("Sem plano");
 return;
 }
 
-if(user.keysGenerated >= user.planLimit){
-alert("Limite atingido");
-return;
-}
-
-let keyData={
-key: gerarCodigo(),
-type:"hour",
-used:false,
+let key={
+key:gerarCodigo(),
+owner:user.username,
 revoked:false,
 device:null,
-createdAt:new Date().toISOString(),
-owner:user.username
+createdAt:new Date().toISOString()
 };
 
 await fetch(KEY_API,{
 method:"POST",
 headers:{"Content-Type":"application/json"},
-body:JSON.stringify(keyData)
+body:JSON.stringify(key)
 });
 
-/* atualiza contador */
-
-user.keysGenerated++;
+user.keysGenerated=(user.keysGenerated||0)+1;
 
 await fetch(USER_API+"/"+user.username,{
 method:"PUT",
@@ -195,58 +281,37 @@ body:JSON.stringify({keysGenerated:user.keysGenerated})
 localStorage.setItem("user",JSON.stringify(user));
 
 carregarKeys();
-atualizarDashboard();
+atualizarDash();
 }
 
-/* ===== CARREGAR KEYS ===== */
+/* CARREGAR KEYS */
 
 async function carregarKeys(){
 
-try{
+let res=await fetch(KEY_API);
+let keys=await res.json();
 
-let res = await fetch(KEY_API);
-let keys = await res.json();
+let minhas=keys.filter(k=>k.owner==user.username);
 
-/* filtra apenas do usuário */
-let minhas = keys.filter(k=>k.owner===user.username);
+let box=document.getElementById("keysList");
+box.innerHTML="";
 
-let container=document.getElementById("keysContainer");
-container.innerHTML="";
-
-/* render */
 minhas.reverse().forEach(k=>{
-
-container.innerHTML+=`
+box.innerHTML+=`
 <div class="keyCard">
-
 <b>${k.key}</b><br>
-
-Status:
-<span class="status">
-${k.revoked ? "REVOGADA":"ATIVA"}
-</span><br>
-
-Criada:
-${new Date(k.createdAt).toLocaleString()}<br>
-
-Device:
-${k.device || "Nenhum"}<br><br>
+Status: ${k.revoked?"Revogada":"Ativa"}<br>
+Device: ${k.device||"Nenhum"}<br>
 
 <button class="btn" onclick="revogar('${k.key}')">Revogar</button>
 <button class="btn" onclick="resetar('${k.key}')">Resetar</button>
 <button class="btn" onclick="excluir('${k.key}')">Excluir</button>
-
 </div>
 `;
-
 });
-
-}catch(e){
-console.log("Erro ao carregar keys");
-}
 }
 
-/* ===== AÇÕES ===== */
+/* AÇÕES */
 
 async function revogar(key){
 await fetch(KEY_API+"/"+key,{
@@ -271,22 +336,27 @@ await fetch(KEY_API+"/"+key,{method:"DELETE"});
 carregarKeys();
 }
 
-/* ===== LOGOUT ===== */
+/* LOGOUT */
 
 function logout(){
 localStorage.removeItem("user");
 location.reload();
 }
 
-/* ===== AUTO REFRESH ===== */
+/* AUTO LOGIN */
+
+let saved=localStorage.getItem("user");
+if(saved){
+user=JSON.parse(saved);
+abrirDashboard();
+}
 
 setInterval(()=>{
+if(user){
 carregarKeys();
-atualizarDashboard();
+atualizarDash();
+}
 },5000);
-
-carregarKeys();
-atualizarDashboard();
 
 </script>
 
