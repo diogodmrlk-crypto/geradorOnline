@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -153,18 +152,19 @@ function showDashboard(){
       <button onclick="showGenerateKey()">Gerar key</button>
     </div>
     <div id="userKeys"></div>`;
-    loadUserKeys(true);
+    loadUserKeys();
     startCountdown();
   }
 }
 
-// Countdown do plano
+// Plano countdown
 function startCountdown(){
   if(!currentUser.planEnd) return;
   const span=document.getElementById("planCountdown");
-  const interval=setInterval(()=>{
-    const now=new Date(); const end=new Date(currentUser.planEnd);
-    let diff=end-now; if(diff<=0){span.innerText="Expirado"; clearInterval(interval); return;}
+  setInterval(()=>{
+    const now=new Date(), end=new Date(currentUser.planEnd);
+    let diff=end-now;
+    if(diff<=0){span.innerText="Expirado"; return;}
     const d=Math.floor(diff/86400000); diff%=86400000;
     const h=Math.floor(diff/3600000); diff%=3600000;
     const m=Math.floor(diff/60000);
@@ -177,7 +177,6 @@ function startCountdown(){
 function showGenerateKey(){
   if(!currentUser.plan){ alert("Adquira um plano!"); return;}
   if(currentUser.keysGenerated>=currentUser.planLimit){ alert("Limite de keys atingido!"); return;}
-
   const tipo=prompt("Tipo de key (hour/day/month/year):"); if(!tipo) return;
   let prefix="FERRAO-CHEATS-";
   if(currentUser.plan==="avancado"||currentUser.admin){
@@ -186,14 +185,13 @@ function showGenerateKey(){
   }
   const randomStr=Math.random().toString(36).substring(2,10).toUpperCase();
   const newKey=`${prefix}${randomStr}`;
-
   fetch(KEYS_API,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({key:newKey,type:tipo,username:currentUser.username,deviceUsed:null,active:true})})
-  .then(()=>{currentUser.keysGenerated++; document.getElementById("keysCount").innerText=currentUser.keysGenerated; loadUserKeys(true);})
+  .then(()=>{currentUser.keysGenerated++; document.getElementById("keysCount").innerText=currentUser.keysGenerated; loadUserKeys();})
   .catch(()=>alert("Erro ao gerar key"));
 }
 
 // Load keys em tempo real
-function loadUserKeys(autoRefresh=false){
+function loadUserKeys(){
   fetch(KEYS_API).then(res=>res.json()).then(keys=>{
     const userKeys=keys.filter(k=>k.username===currentUser.username);
     const div=document.getElementById("userKeys"); div.innerHTML="";
@@ -213,14 +211,14 @@ function loadUserKeys(autoRefresh=false){
         </div>
       </div>`;
     });
-    if(autoRefresh) keysInterval=setTimeout(()=>loadUserKeys(true),3000);
-  }).catch(e=>console.error(e));
+    setTimeout(loadUserKeys,3000); // auto-refresh
+  }).catch(console.error);
 }
 
 // Key management
-function revokeKey(key){fetch(`${KEYS_API}/${key}`,{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({active:false})}).then(()=>loadUserKeys(true));}
-function resetDevice(key){fetch(`${KEYS_API}/${key}`,{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({deviceUsed:null})}).then(()=>loadUserKeys(true));}
-function deleteKey(key){fetch(`${KEYS_API}/${key}`,{method:"DELETE"}).then(()=>{currentUser.keysGenerated--; document.getElementById("keysCount").innerText=currentUser.keysGenerated; loadUserKeys(true);});}
+function revokeKey(key){fetch(`${KEYS_API}/${key}`,{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({active:false})}).then(loadUserKeys);}
+function resetDevice(key){fetch(`${KEYS_API}/${key}`,{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({deviceUsed:null})}).then(loadUserKeys);}
+function deleteKey(key){fetch(`${KEYS_API}/${key}`,{method:"DELETE"}).then(()=>{currentUser.keysGenerated--; document.getElementById("keysCount").innerText=currentUser.keysGenerated; loadUserKeys();});}
 
 // Admin
 async function adminLoadUsers(){
