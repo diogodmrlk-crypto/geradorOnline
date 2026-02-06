@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Ferrao keys</title>
+<title>Ferrao Generator</title>
 
 <style>
 *{margin:0;padding:0;box-sizing:border-box;font-family:'Segoe UI',Tahoma,sans-serif;}
@@ -242,6 +242,8 @@ async function generate(){
 
 if(!currentUser.plan) return alert("Você não possui plano");
 
+genOut.textContent="";
+
 for(let i=0;i<qty.value;i++){
 
 const key=prefix.value+rand(8);
@@ -261,7 +263,7 @@ device:null
 genOut.textContent+=key+"\n";
 }
 
-loadUserKeys();
+await loadUserKeys();
 }
 
 async function loadUserKeys(){
