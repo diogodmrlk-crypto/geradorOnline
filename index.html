@@ -40,10 +40,8 @@ input{ width:90%; padding:10px; margin:6px 0; border-radius:8px; border:none; ba
 <script>
 let currentUser = null;
 
-// Sua API de usuários
+// APIs
 const USERS_API = "https://gerador-online-9fqv.vercel.app/dados";
-
-// Sua API de keys
 const KEYS_API = "https://teste-api-mcok.vercel.app/keys";
 
 // Toggle menu
@@ -81,13 +79,16 @@ async function login(){
 
   try{
     const res = await fetch(USERS_API);
+    if(!res.ok) throw new Error("Erro ao conectar com a API");
     const users = await res.json();
-    const user = users.find(x=>x.username===u && x.password===p);
+    const user = users.find(x => x.username === u && x.password === p);
     if(!user){ alert("Usuário ou senha inválidos"); return; }
+
     currentUser = user;
     showDashboard();
   }catch(e){
-    alert("Erro ao conectar com a API de usuários");
+    alert("Erro ao conectar com a API: "+e.message);
+    console.error(e);
   }
 }
 
@@ -121,6 +122,7 @@ async function register(){
 
   try{
     const res = await fetch(USERS_API);
+    if(!res.ok) throw new Error("Erro ao conectar com a API");
     let users = await res.json();
     if(users.find(x=>x.username===u)){ alert("Usuário já existe!"); return; }
 
@@ -134,14 +136,11 @@ async function register(){
       avatar,
       keysGenerated:0
     };
-    users.push(newUser);
 
-    // Enviar para API simulada
     await fetch(USERS_API, { method:"POST", headers:{ "Content-Type":"application/json" }, body:JSON.stringify(newUser) });
-
     alert("Cadastro realizado!");
     showLogin();
-  }catch(e){ alert("Erro ao conectar com API"); }
+  }catch(e){ alert("Erro ao conectar com API: "+e.message); }
 }
 
 // Dashboard
@@ -172,6 +171,7 @@ function showDashboard(){
 async function adminLoadUsers(){
   try{
     const res = await fetch(USERS_API);
+    if(!res.ok) throw new Error("Erro ao carregar usuários");
     const users = await res.json();
     const div = document.getElementById("usersList");
     div.innerHTML = "";
@@ -184,7 +184,7 @@ async function adminLoadUsers(){
         <button onclick="promptAssignPlan('${u.username}')">Atribuir Plano</button>
       </div>`;
     });
-  }catch(e){ alert("Erro ao carregar usuários"); }
+  }catch(e){ alert("Erro ao carregar usuários: "+e.message); }
 }
 
 // Planos
@@ -196,6 +196,7 @@ async function promptAssignPlan(username){
 
   try{
     const res = await fetch(USERS_API);
+    if(!res.ok) throw new Error("Erro ao conectar com API");
     let users = await res.json();
     const user = users.find(x=>x.username===username);
     user.plan=plan; user.planLimit=limit; user.planEnd=planEnd;
@@ -203,11 +204,12 @@ async function promptAssignPlan(username){
     await fetch(USERS_API, { method:"POST", headers:{ "Content-Type":"application/json" }, body:JSON.stringify(user) });
     alert("Plano atribuído!");
     adminLoadUsers();
-  }catch(e){ alert("Erro ao atualizar plano"); }
+  }catch(e){ alert("Erro ao atualizar plano: "+e.message); }
 }
 
 // Gerar key
 function showGenerateKey(){
+  if(!currentUser.plan){ alert("Adquira um plano para gerar keys!"); return; }
   const tipo = prompt("Tipo de key (hour/day/month/year):");
   if(!tipo) return;
 
