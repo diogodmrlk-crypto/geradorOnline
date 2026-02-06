@@ -18,8 +18,9 @@ input{ width:90%; padding:10px; margin:6px 0; border-radius:8px; border:none; ba
 .avatar{width:60px;height:60px;border-radius:50%;object-fit:cover;border:2px solid #3fc03f; cursor:pointer;}
 .cards-container{display:flex; flex-wrap:wrap; justify-content:center; margin-top:20px;}
 .cards-container .card{flex:1 1 250px; margin:10px;}
-.key-card{background:#225522; padding:10px; border-radius:10px; margin:8px; text-align:left;}
+.key-card{background:#225522; padding:10px; border-radius:10px; margin:8px; text-align:left; display:flex; justify-content:space-between; align-items:center;}
 .key-card p{margin:3px 0;}
+.key-card button{background:#ff5555; padding:5px 10px; font-size:12px;}
 </style>
 </head>
 <body>
@@ -159,7 +160,7 @@ function showDashboard(){
         <img src="${currentUser.avatar}" class="avatar">
         <p>Plano: ${currentUser.plan||'Sem plano'}</p>
         <p>Expira em: <span id="planCountdown">--</span></p>
-        <p>Keys geradas: ${currentUser.keysGenerated||0}/${currentUser.planLimit||0}</p>
+        <p>Keys geradas: <span id="keysCount">${currentUser.keysGenerated||0}</span>/${currentUser.planLimit||0}</p>
         <button onclick="showGenerateKey()">Gerar key</button>
       </div>
       <div id="userKeys"></div>`;
@@ -195,13 +196,19 @@ function showGenerateKey(){
   const tipo=prompt("Tipo de key (hour/day/month/year):"); 
   if(!tipo) return;
 
+  let prefix = "FERRAO-CHEATS-";
+  if(currentUser.plan === "avancado" || currentUser.admin){
+    const custom = prompt("Prefixo (ou deixe vazio para padrão):");
+    if(custom) prefix = custom.toUpperCase()+"-";
+  }
+
   const randomStr=Math.random().toString(36).substring(2,10).toUpperCase();
-  const newKey=`FERRAO-CHEATS-${randomStr}`;
+  const newKey=`${prefix}${randomStr}`;
 
   fetch(KEYS_API,{
     method:"POST",
     headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({key:newKey,type:tipo,username:currentUser.username,deviceUsed:false})
+    body:JSON.stringify({key:newKey,type:tipo,username:currentUser.username,deviceUsed:null,active:true})
   })
   .then(()=> {
     alert("Key gerada!");
@@ -222,12 +229,56 @@ async function loadUserKeys(){
     userKeys.forEach(k=>{
       div.innerHTML+=`
         <div class="key-card">
-          <p><strong>Key:</strong> ${k.key}</p>
-          <p><strong>Tipo:</strong> ${k.type}</p>
-          <p><strong>Device usado:</strong> ${k.deviceUsed ? k.deviceUsed : 'Nenhum'}</p>
+          <div>
+            <p><strong>Key:</strong> ${k.key}</p>
+            <p><strong>Tipo:</strong> ${k.type}</p>
+            <p><strong>Device:</strong> ${k.deviceUsed||"Nenhum"}</p>
+            <p><strong>Status:</strong> ${k.active?"Ativa":"Expirada"}</p>
+          </div>
+          <div>
+            <button onclick="revokeKey('${k.key}')">Revogar</button>
+            <button onclick="resetDevice('${k.key}')">Reset Device</button>
+            <button onclick="deleteKey('${k.key}')">Excluir</button>
+          </div>
         </div>`;
     });
   }catch(e){console.error(e);}
+}
+
+// Key management
+async function revokeKey(key){
+  try{
+    await fetch(`${KEYS_API}/${key}`,{
+      method:"PUT",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({active:false})
+    });
+    alert("Key revogada!");
+    loadUserKeys();
+  }catch(e){alert("Erro ao revogar key");console.error(e);}
+}
+
+async function resetDevice(key){
+  try{
+    await fetch(`${KEYS_API}/${key}`,{
+      method:"PUT",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({deviceUsed:null})
+    });
+    alert("Device resetado!");
+    loadUserKeys();
+  }catch(e){alert("Erro ao resetar device");console.error(e);}
+}
+
+async function deleteKey(key){
+  try{
+    await fetch(`${KEYS_API}/${key}`,{
+      method:"DELETE"
+    });
+    alert("Key excluída!");
+    currentUser.keysGenerated--;
+    loadUserKeys();
+  }catch(e){alert("Erro ao excluir key");console.error(e);}
 }
 
 // Admin funções
@@ -253,7 +304,7 @@ async function adminLoadUsers(){
 
 // Planos admin
 async function promptAssignPlan(username){
-  const plan=prompt("Nome do plano:");
+  const plan=prompt("Nome do plano (basico/avancado):");
   const limit=parseInt(prompt("Limite de keys:"));
   const days=parseInt(prompt("Duração em dias:"));
   const planEnd=new Date(Date.now()+days*86400000).toISOString();
